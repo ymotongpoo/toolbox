@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -58,8 +59,23 @@ func gnomeScreenshotPath() (string, error) {
 	return "", fmt.Errorf("gnome-screenshot is not found. please install it in your enviroment.")
 }
 
+//
+func takeScreenshot() (string, error) {
+	gsPath, err := gnomeScreenshotPath()
+	if err != nil {
+		return "", err
+	}
+	tmpfile := tempImagePath()
+	cmd := exec.Command(gsPath, "-a", "-f", tmpfile)
+	err = cmd.Run()
+	if err != nil {
+		return "", err
+	}
+	return tmpfile, nil
+}
+
 // upload sends a image file to Yabumi in form/multipart format and get status infomation.
-func upload(url, filename string) (*http.Response, error) {
+func upload(filename string) (*http.Response, error) {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
 
@@ -78,38 +94,51 @@ func upload(url, filename string) (*http.Response, error) {
 	}
 	w.Close()
 
-	req, err := http.NewRequest("POST", url, &b)
+	req, err := http.NewRequest("POST", YabumiAPI, &b)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", UserAgent)
-	req.Header.Set("Content-Type", "multipart/form-data")
-	res, err := http.DefaultClient.Do(req)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	client := &http.Client{}
+	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func main() {
-	gsPath, err := gnomeScreenshotPath()
-	if err != nil {
-		log.Fatalln(err)
+// openBrowser opens the url in the default browser.
+func openBrowser(url string) error {
+	var err error
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
 	}
-	tmpfile := tempImagePath()
-	cmd := exec.Command(gsPath, "-a", "-f", tmpfile)
-	err = cmd.Run()
+	return err
+}
+
+func main() {
+	tmpfile, err := takeScreenshot()
 	if err != nil {
 		log.Fatalln(err)
 	}
 	defer os.Remove(tmpfile)
 
-	res, err := upload(YabumiAPI, tmpfile)
+	res, err := upload(tmpfile)
 	if err != nil {
 		log.Fatalln(err)
 	}
+	defer res.Body.Close()
 
-	log.Println(res)
-	fmt.Println(res.Header.Get("Location"))
-	fmt.Println(res.Header.Get("Link"))
+	err = openBrowser(res.Header.Get("X-Yabumi-Image-Edit-Url"))
+	if err != nil {
+		log.Fatalln(err)
+	}
 }
