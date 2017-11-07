@@ -32,6 +32,12 @@ func main() {
 	}
 	defer notify.Stop(c)
 
+	s := NewSender("client_secrets.json") // TODO: replace file name with cli args
+	err := s.Init()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	
 	for {
 		switch ei := <-c; ei.Event() {
 		case notify.InCloseWrite:
