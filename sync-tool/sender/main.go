@@ -15,9 +15,29 @@
 package main
 
 import (
-	"fmt"
+	"log"
+
+	"github.com/rjeczalik/notify"
 )
 
 func main() {
-	fmt.Println("foo")
+	c := make(chan notify.EventInfo, 1)
+
+	eventList := []notify.Event{
+		notify.InCreate,
+		notify.InCloseWrite,
+	}
+	if err := notify.Watch(".", c, eventList...); err != nil {
+		log.Fatal(err)
+	}
+	defer notify.Stop(c)
+
+	for {
+		switch ei := <-c; ei.Event() {
+		case notify.InCloseWrite:
+			log.Printf("Writing to %s is done!", ei.Path())
+		case notify.InCreate:
+			log.Printf("File %s is created!", ei.Path())
+		}
+	}
 }
