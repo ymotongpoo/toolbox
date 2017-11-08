@@ -42,6 +42,12 @@ func main() {
 		switch ei := <-c; ei.Event() {
 		case notify.InCloseWrite:
 			log.Printf("Writing to %s is done!", ei.Path())
+			res, err := s.Upload(ei.Path(), "")
+			if err != nil {
+				log.Print(err)
+			} else {
+				log.Print(res)
+			}
 		case notify.InCreate:
 			log.Printf("File %s is created!", ei.Path())
 		}
