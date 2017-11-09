@@ -123,15 +123,16 @@ func (s *Sender) Init() error {
 	return nil
 }
 
-// Upload sends a file in filename to Google Drive with the description.
-func (s *Sender) Upload(filename, desc string) (*drive.File, error) {
+// Upload sends a file in filename to directory id in Google Drive with the description.
+func (s *Sender) Upload(filename, desc string, parents []string) (*drive.File, error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	dst := &drive.File{
-		Name: filename,
+		Name:        filename,
 		Description: desc,
+		Parents:     parents,
 	}
 	res, err := s.service.Files.Create(dst).Media(f).Do()
 	if err != nil {

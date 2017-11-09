@@ -20,6 +20,11 @@ import (
 	"github.com/rjeczalik/notify"
 )
 
+const (
+	UploadTargetFolderId = "1QaF-81k04ieUk4RB97PU1eALP0JnXN4S"
+	EncodeDoneFolderId   = "1i0GSCuF10lW1sx3A_vDGbvjAKIxPS2yM"
+)
+
 func main() {
 	c := make(chan notify.EventInfo, 1)
 
@@ -37,12 +42,12 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	
+
 	for {
 		switch ei := <-c; ei.Event() {
 		case notify.InCloseWrite:
 			log.Printf("Writing to %s is done!", ei.Path())
-			res, err := s.Upload(ei.Path(), "")
+			res, err := s.Upload(ei.Path(), "", []string{UploadTargetFolderId})
 			if err != nil {
 				log.Print(err)
 			} else {
