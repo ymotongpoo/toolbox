@@ -18,7 +18,7 @@ import (
 	"log"
 
 	"github.com/rjeczalik/notify"
-	"github.com/ymotongpoo/sync-tool"
+	"github.com/ymotongpoo/toolbox/sync-tool"
 )
 
 func main() {

@@ -18,7 +18,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/ymotongpoo/sync-tool"
+	"github.com/ymotongpoo/toolbox/sync-tool"
 )
 
 const PoleInterval = 10 * time.Minute

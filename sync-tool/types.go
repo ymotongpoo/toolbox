@@ -16,11 +16,9 @@ package synctool
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"mime"
-	"net/http"
 	"os"
 	"path/filepath"
 
@@ -49,7 +47,7 @@ const (
 type Manager struct {
 	secrets string
 	service *drive.Service
-	files   []*File
+	files   []drive.File
 }
 
 type File struct {
@@ -61,15 +59,11 @@ type File struct {
 }
 
 // NewManager creates Manager with OAuth2 client secrets. It must call Init() method to activate actual drive.Service.
-func NewManager(secrets string) *Sender {
-	return &Sender{
+func NewManager(secrets string) *Manager {
+	return &Manager{
 		secrets: secrets,
 		service: nil,
 	}
-}
-
-// initObject is the common function to initialize *drive.Service
-func initObject(secrets string, s *drive.Service) error {
 }
 
 // Init creates http.Client based on oauth2.Config and holds drive.Service
@@ -110,29 +104,54 @@ func (m *Manager) Upload(path, desc string, parents []string) (*drive.File, erro
 		Parents:     parents,
 		MimeType:    mimeType,
 	}
-	res, err := s.service.Files.Create(dst).Media(f).Do()
+	res, err := m.service.Files.Create(dst).Media(f).Do()
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func (m *Manager) Download(id string) (path, error) {
-	ctx := context.WithCancel(context.TODO())
+// Download fetches and creates a file from the path to current directory.
+func (m *Manager) Download(id string) (int64, string, error) {
+	//ctx, cancel := context.WithCancel(context.TODO())
 	f, err := m.service.Files.Get(id).Fields("id", "name").Do()
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
-	// TODO: progressive download
+	file, err := os.Create(f.Name)
+	if err != nil {
+		return 0, "", err
+	}
+	defer file.Close()
+	res, err := m.service.Files.Get(id).Download()
+	if err != nil {
+		return 0, "", err
+	}
+	defer res.Body.Close()
+
+	n, err := io.Copy(file, res.Body)
+	return n, f.Name, nil
 }
 
-// NewReceiver creates Receiver with OAuth2 client secrets. It must call Init() method to activate actual drive.Service.
-func NewReceiver(secrets string) *Receiver {
-	return &Receiver{
-		secrets: secrets,
-		service: nil,
-		files:   []*File{},
+func (m *Manager) FindNewFiles() ([]drive.File, error) {
+	hasNext := true
+	pageToken := ""
+	files := []drive.File{}
+	for hasNext {
+		fl, err := m.service.Files.List().PageToken(pageToken).Do() // TODO: set folder ID.
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range fl.Files {
+			files = append(files, *f)
+		}
+		if fl.NextPageToken != "" {
+			pageToken = fl.NextPageToken
+		} else {
+			hasNext = false
+		}
 	}
+	return files, nil
 }
 
 // Loginfo returns as string in the required data inside *data.File.
