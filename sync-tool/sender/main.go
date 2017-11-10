@@ -43,14 +43,14 @@ func main() {
 		switch ei := <-c; ei.Event() {
 		case notify.InCloseWrite:
 			log.Printf("Writing to %s is done!", ei.Path())
-			go upload(m)
+			go upload(m, ei)
 		case notify.InCreate:
 			log.Printf("File %s is created!", ei.Path())
 		}
 	}
 }
 
-func upload(m *synctool.Manager) {
+func upload(m *synctool.Manager, ei notify.EventInfo) {
 	res, err := m.Upload(ei.Path(), "", []string{synctool.UploadTargetFolderID})
 	if err != nil {
 		log.Print(err)
