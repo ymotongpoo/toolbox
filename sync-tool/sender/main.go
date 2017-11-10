@@ -51,7 +51,7 @@ func main() {
 			if err != nil {
 				log.Print(err)
 			} else {
-				log.Print(res)
+				log.Print(Loginfo(res))
 			}
 		case notify.InCreate:
 			log.Printf("File %s is created!", ei.Path())

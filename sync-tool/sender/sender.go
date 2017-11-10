@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -28,6 +29,8 @@ import (
 
 	"google.golang.org/api/drive/v3"
 )
+
+const GoogleDriveOpenURL = "https://drive.google.com/open?id=%s"
 
 type Sender struct {
 	secrets string
@@ -123,20 +126,31 @@ func (s *Sender) Init() error {
 	return nil
 }
 
-// Upload sends a file in filename to directory id in Google Drive with the description.
-func (s *Sender) Upload(filename, desc string, parents []string) (*drive.File, error) {
-	f, err := os.Open(filename)
+// Upload sends a file in path to directory id in Google Drive with the description.
+func (s *Sender) Upload(path, desc string, parents []string) (*drive.File, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	filename := filepath.Base(path)
+	mimeType := mime.TypeByExtension(filepath.Ext(filename))
 	dst := &drive.File{
 		Name:        filename,
 		Description: desc,
 		Parents:     parents,
+		MimeType:    mimeType,
 	}
 	res, err := s.service.Files.Create(dst).Media(f).Do()
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
+}
+
+func Loginfo(f *drive.File) string {
+	if f == nil {
+		return "no object is available"
+	}
+	id := f.Id
+	return fmt.Sprintf(GoogleDriveOpenURL, id)
 }
