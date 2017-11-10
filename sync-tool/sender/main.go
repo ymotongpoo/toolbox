@@ -18,11 +18,7 @@ import (
 	"log"
 
 	"github.com/rjeczalik/notify"
-)
-
-const (
-	UploadTargetFolderId = "1QaF-81k04ieUk4RB97PU1eALP0JnXN4S"
-	EncodeDoneFolderId   = "1i0GSCuF10lW1sx3A_vDGbvjAKIxPS2yM"
+	"github.com/ymotongpoo/sync-tool"
 )
 
 func main() {
@@ -37,8 +33,8 @@ func main() {
 	}
 	defer notify.Stop(c)
 
-	s := NewSender("client_secrets.json") // TODO: replace file name with cli args
-	err := s.Init()
+	m := synctool.NewManager(synctool.DefaultSecretsFile) // TODO: replace file name with cli args
+	err := m.Init()
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -47,11 +43,11 @@ func main() {
 		switch ei := <-c; ei.Event() {
 		case notify.InCloseWrite:
 			log.Printf("Writing to %s is done!", ei.Path())
-			res, err := s.Upload(ei.Path(), "", []string{UploadTargetFolderId})
+			res, err := m.Upload(ei.Path(), "", []string{synctool.UploadTargetFolderID})
 			if err != nil {
 				log.Print(err)
 			} else {
-				log.Print(Loginfo(res))
+				log.Print(synctool.Loginfo(res))
 			}
 		case notify.InCreate:
 			log.Printf("File %s is created!", ei.Path())

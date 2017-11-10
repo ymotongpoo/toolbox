@@ -18,19 +18,18 @@ import (
 	"log"
 	"time"
 
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-
-	"google.golang.org/api/drive/v3"
+	"github.com/ymotongpoo/sync-tool"
 )
 
-const (
-	UploadTargetFolderId = "1QaF-81k04ieUk4RB97PU1eALP0JnXN4S"
-	EncodeDoneFolderId   = "1i0GSCuF10lW1sx3A_vDGbvjAKIxPS2yM"
-	PoleInterval         = 10 * time.Minute
-)
+const PoleInterval = 10 * time.Minute
 
 func main() {
+	m := synctool.NewManager(synctool.DefaultSecretsFile)
+	err := r.Init()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	t := time.NewTicker(PollInterval)
 	for {
 		select {

@@ -12,37 +12,17 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package main
+package synctool
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
 
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-
-	"google.golang.org/api/drive/v3"
 )
-
-const GoogleDriveOpenURL = "https://drive.google.com/open?id=%s"
-
-type Sender struct {
-	secrets string
-	service *drive.Service
-}
-
-func NewSender(secrets string) *Sender {
-	return &Sender{
-		secrets: secrets,
-		service: nil,
-	}
-}
 
 func getHTTPClient(ctx context.Context, config *oauth2.Config) (*http.Client, error) {
 	tokenCacheDir := ".credentials"
@@ -100,57 +80,4 @@ func saveToken(path string, token *oauth2.Token) error {
 		return err
 	}
 	return nil
-}
-
-// Init creates http.Client based on oauth2.Config and holds drive.Service
-// with hte credential.
-func (s *Sender) Init() error {
-	ctx := context.Background()
-	b, err := ioutil.ReadFile(s.secrets)
-	if err != nil {
-		return err
-	}
-	config, err := google.ConfigFromJSON(b, drive.DriveScope)
-	if err != nil {
-		return err
-	}
-	client, err := getHTTPClient(ctx, config)
-	if err != nil {
-		return err
-	}
-	service, err := drive.New(client)
-	if err != nil {
-		return err
-	}
-	s.service = service
-	return nil
-}
-
-// Upload sends a file in path to directory id in Google Drive with the description.
-func (s *Sender) Upload(path, desc string, parents []string) (*drive.File, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	filename := filepath.Base(path)
-	mimeType := mime.TypeByExtension(filepath.Ext(filename))
-	dst := &drive.File{
-		Name:        filename,
-		Description: desc,
-		Parents:     parents,
-		MimeType:    mimeType,
-	}
-	res, err := s.service.Files.Create(dst).Media(f).Do()
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
-func Loginfo(f *drive.File) string {
-	if f == nil {
-		return "no object is available"
-	}
-	id := f.Id
-	return fmt.Sprintf(GoogleDriveOpenURL, id)
 }
