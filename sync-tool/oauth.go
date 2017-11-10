@@ -27,7 +27,7 @@ import (
 
 func getHTTPClient(ctx context.Context, config *oauth2.Config) (*http.Client, error) {
 	tokenCacheDir := ".credentials"
-	err := os.MkdirAll(tokenCacheDir, 0600)
+	err := os.MkdirAll(tokenCacheDir, 0755)
 	if err != nil {
 		return nil, err
 	}

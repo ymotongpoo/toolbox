@@ -17,6 +17,7 @@ package synctool
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"mime"
 	"os"
@@ -25,7 +26,6 @@ import (
 	"golang.org/x/oauth2/google"
 
 	"google.golang.org/api/drive/v3"
-	"io"
 )
 
 const (
@@ -47,15 +47,7 @@ const (
 type Manager struct {
 	secrets string
 	service *drive.Service
-	files   []drive.File
-}
-
-type File struct {
-	// Path to the local file.
-	Path string
-
-	// Google Drive file ID
-	ID string
+	files   []string
 }
 
 // NewManager creates Manager with OAuth2 client secrets. It must call Init() method to activate actual drive.Service.
@@ -133,25 +125,42 @@ func (m *Manager) Download(id string) (int64, string, error) {
 	return n, f.Name, nil
 }
 
-func (m *Manager) FindNewFiles() ([]drive.File, error) {
-	hasNext := true
-	pageToken := ""
+// FindFiles get files in UploadTargetfolderid.
+func (m *Manager) FindFiles() ([]drive.File, error) {
 	files := []drive.File{}
-	for hasNext {
-		fl, err := m.service.Files.List().PageToken(pageToken).Do() // TODO: set folder ID.
-		if err != nil {
-			return nil, err
-		}
-		for _, f := range fl.Files {
-			files = append(files, *f)
-		}
-		if fl.NextPageToken != "" {
-			pageToken = fl.NextPageToken
-		} else {
-			hasNext = false
-		}
+	// see parameter setting on https://developers.google.com/drive/v3/web/search-parameters#fn4
+	query := fmt.Sprintf("'%s' in parents", UploadTargetFolderID)
+	fl, err := m.service.Files.List().Q(query).Do()
+	if err != nil {
+		return nil, fmt.Errorf("FindFiles: %v", err)
+	}
+	for _, f := range fl.Files {
+		files = append(files, *f)
 	}
 	return files, nil
+}
+
+func (m *Manager) FindNewFiles() ([]string, error) {
+	files, err := m.FindFiles()
+	if err != nil {
+		return nil, fmt.Errorf("FindNewFiles: %v", err)
+	}
+	newIds := []string{}
+loop:
+	for _, f := range files {
+		for _, id := range m.files {
+			if f.Id == id {
+				continue loop
+			}
+		}
+		newIds = append(newIds, f.Id)
+	}
+	m.files = append(m.files, newIds...)
+	return newIds, nil
+}
+
+func (m *Manager) NumFiles() int {
+	return len(m.files)
 }
 
 // Loginfo returns as string in the required data inside *data.File.
