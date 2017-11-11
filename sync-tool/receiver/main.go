@@ -31,30 +31,53 @@ func main() {
 	}
 
 	t := time.NewTicker(PollInterval)
+	ch := make(chan *synctool.File, 20)
 	for {
-		var ch <-chan string
 		select {
 		case c := <-t.C:
 			log.Println(m.NumFiles(), c)
-			ch, err = checkNewFile(m)
+			checkNewFile(m, ch)
 			if err != nil {
 				log.Println(err)
 			}
-		case id := <-ch:
-			log.Printf("start: %s\n", id)
+		case f := <-ch:
+			download(m, f)
+			encode(f)
+			upload(f)
 		}
 	}
 }
 
-func checkNewFile(m *synctool.Manager) (<-chan string, error) {
+func checkNewFile(m *synctool.Manager, ch chan<- *synctool.File) {
 	files, err := m.FindNewFiles()
 	if err != nil {
-		return nil, err
-	} else {
-		for _, f := range files {
-			log.Println(f)
-		}
+		log.Println(err)
+		return
 	}
-	ch := make(chan string, 1)
-	return ch, nil
+	for _, f := range files {
+		ch <- f
+	}
+}
+
+func download(m *synctool.Manager, f *synctool.File) {
+	log.Printf("start: %s\n", f.ID)
+	// TODO: try later
+	// n, path, err := m.Download(f.ID)
+	// if err != nil {
+	// 	log.Printf("download failed: %s\n", f.ID)
+	// 	return
+	// }
+	n, path := 100, "aaaa"
+	log.Printf("downloaded %v bytes: %v\n", n, path)
+	f.Downloaded = true
+}
+
+func encode(f *synctool.File) {
+	log.Printf("encoding: %s\n", f.Path)
+	f.Encoded = true
+}
+
+func upload(f *synctool.File) {
+	encodedPath := f.Path + ".mp4"
+	log.Printf("uploading: %s\n", encodedPath)
 }

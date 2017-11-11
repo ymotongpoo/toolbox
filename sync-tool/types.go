@@ -47,7 +47,23 @@ const (
 type Manager struct {
 	secrets string
 	service *drive.Service
-	files   []string
+	files   []*File
+}
+
+// File holds required info for encoding management.
+type File struct {
+	Path       string
+	ID         string
+	Downloaded bool
+	Encoded    bool
+}
+
+func NewFile(path, id string) *File {
+	return &File{
+		Path:       path,
+		ID:         id,
+		Downloaded: false,
+	}
 }
 
 // NewManager creates Manager with OAuth2 client secrets. It must call Init() method to activate actual drive.Service.
@@ -140,23 +156,24 @@ func (m *Manager) FindFiles() ([]drive.File, error) {
 	return files, nil
 }
 
-func (m *Manager) FindNewFiles() ([]string, error) {
+func (m *Manager) FindNewFiles() ([]*File, error) {
 	files, err := m.FindFiles()
 	if err != nil {
 		return nil, fmt.Errorf("FindNewFiles: %v", err)
 	}
-	newIds := []string{}
+	newFiles := []*File{}
 loop:
 	for _, f := range files {
-		for _, id := range m.files {
-			if f.Id == id {
+		for _, mf := range m.files {
+			if f.Id == mf.ID {
 				continue loop
 			}
 		}
-		newIds = append(newIds, f.Id)
+		nf := NewFile(f.Name, f.Id)
+		newFiles = append(newFiles, nf)
 	}
-	m.files = append(m.files, newIds...)
-	return newIds, nil
+	m.files = append(m.files, newFiles...)
+	return newFiles, nil
 }
 
 func (m *Manager) NumFiles() int {
