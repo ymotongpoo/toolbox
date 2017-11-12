@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"mime"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"golang.org/x/oauth2/google"
@@ -52,17 +53,20 @@ type Manager struct {
 
 // File holds required info for encoding management.
 type File struct {
-	Path       string
-	ID         string
-	Downloaded bool
-	Encoded    bool
+	Path        string
+	ID          string
+	Downloaded  bool
+	Encoded     bool
+	EncodedPath string
 }
 
 func NewFile(path, id string) *File {
 	return &File{
-		Path:       path,
-		ID:         id,
-		Downloaded: false,
+		Path:        path,
+		ID:          id,
+		Downloaded:  false,
+		Encoded:     false,
+		EncodedPath: "",
 	}
 }
 
@@ -96,49 +100,6 @@ func (m *Manager) Init() error {
 	}
 	m.service = service
 	return nil
-}
-
-// Upload sends a file in path to directory id in Google Drive with the description.
-func (m *Manager) Upload(path, desc string, parents []string) (*drive.File, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	filename := filepath.Base(path)
-	mimeType := mime.TypeByExtension(filepath.Ext(filename))
-	dst := &drive.File{
-		Name:        filename,
-		Description: desc,
-		Parents:     parents,
-		MimeType:    mimeType,
-	}
-	res, err := m.service.Files.Create(dst).Media(f).Do()
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
-// Download fetches and creates a file from the path to current directory.
-func (m *Manager) Download(id string) (int64, string, error) {
-	//ctx, cancel := context.WithCancel(context.TODO())
-	f, err := m.service.Files.Get(id).Fields("id", "name").Do()
-	if err != nil {
-		return 0, "", err
-	}
-	file, err := os.Create(f.Name)
-	if err != nil {
-		return 0, "", err
-	}
-	defer file.Close()
-	res, err := m.service.Files.Get(id).Download()
-	if err != nil {
-		return 0, "", err
-	}
-	defer res.Body.Close()
-
-	n, err := io.Copy(file, res.Body)
-	return n, f.Name, nil
 }
 
 // FindFiles get files in UploadTargetfolderid.
@@ -176,8 +137,124 @@ loop:
 	return newFiles, nil
 }
 
+// Upload sends a file in path to directory id in Google Drive with the description.
+func (m *Manager) Upload(path, desc string, parents []string) (*drive.File, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	filename := filepath.Base(path)
+	mimeType := mime.TypeByExtension(filepath.Ext(filename))
+	dst := &drive.File{
+		Name:        filename,
+		Description: desc,
+		Parents:     parents,
+		MimeType:    mimeType,
+	}
+	res, err := m.service.Files.Create(dst).Media(f).Do()
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// Download fetches and creates a file from the path to current directory.
+func (m *Manager) Download(id string) (int64, string, error) {
+	//ctx, cancel := context.WithCancel(context.TODO())
+	f, err := m.service.Files.Get(id).Fields("id", "name").Do()
+	if err != nil {
+		return 0, "", err
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return 0, "", err
+	}
+	path := filepath.Join(cwd, f.Name)
+	file, err := os.Create(path)
+	if err != nil {
+		return 0, "", err
+	}
+	defer file.Close()
+	res, err := m.service.Files.Get(id).Download()
+	if err != nil {
+		return 0, "", err
+	}
+	defer res.Body.Close()
+
+	n, err := io.Copy(file, res.Body)
+	mf := m.GetFile(f.Id)
+	if mf == nil {
+		mf = &File{
+			ID:          f.Id,
+			Path:        path,
+			Downloaded:  true,
+			Encoded:     false,
+			EncodedPath: "",
+		}
+		m.files = append(m.files, mf)
+	}
+	mf.Downloaded = true
+	return n, path, nil
+}
+
+func (m *Manager) Encode(id string) error {
+	mf := m.GetFile(id)
+	args := []string{
+		fmt.Sprintf("-i %s", mf.Path),
+		"-crf 20.0",
+		"-vcodec libx264 -vf scale=1920:1080",
+		"-preset slow",
+		"-acodec aac -strict experimental",
+		"-ar 48000 -b:a 192k",
+		"-coder 1",
+		"-flags +loop",
+		"-cmp chroma -partitions +parti4x4+partp8x8+partb8x8",
+		"-me_method hex -subq 6 -me_range 16 -g 60",
+		"-keyint_min 25",
+		"-sc_threshold 35",
+		"-i_qfactor 0.71",
+		"-b_strategy 1",
+		"-threads 0",
+		"-f mp4",
+		fmt.Sprintf("%s.mp4", mf.Path),
+	}
+	cmd := exec.Command("ffmpeg", args...)
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+	mf.Encoded = true
+	return nil
+}
+
+// Perge removes all processed file instance from Manager.Files and delete all processed files from file system.
+func (m *Manager) Perge() error {
+	left := make([]*File, len(m.files))
+	for _, f := range m.files {
+		if f.Downloaded && f.Encoded {
+			err := os.Remove(f.Path)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		left = append(left, f)
+	}
+	m.files = left
+	return nil
+}
+
 func (m *Manager) NumFiles() int {
 	return len(m.files)
+}
+
+func (m *Manager) GetFile(id string) *File {
+	for _, f := range m.files {
+		if f.ID == id {
+			return f
+		}
+	}
+	return nil
 }
 
 // Loginfo returns as string in the required data inside *data.File.

@@ -15,13 +15,17 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/ymotongpoo/toolbox/sync-tool"
 )
 
-const PollInterval = 30 * time.Second
+const (
+	PollInterval  = 10 * time.Second
+	PergeInterval = 1 * time.Minute
+)
 
 func main() {
 	m := synctool.NewManager(synctool.DefaultSecretsFile)
@@ -31,6 +35,7 @@ func main() {
 	}
 
 	t := time.NewTicker(PollInterval)
+	pt := time.NewTicker(PergeInterval)
 	ch := make(chan *synctool.File, 20)
 	for {
 		select {
@@ -41,9 +46,11 @@ func main() {
 				log.Println(err)
 			}
 		case f := <-ch:
-			download(m, f)
-			encode(f)
-			upload(f)
+			download(m, f, ch)
+			encode(m, f)
+			upload(m, f)
+		case <-pt.C:
+			m.Perge()
 		}
 	}
 }
@@ -59,25 +66,32 @@ func checkNewFile(m *synctool.Manager, ch chan<- *synctool.File) {
 	}
 }
 
-func download(m *synctool.Manager, f *synctool.File) {
+func download(m *synctool.Manager, f *synctool.File, ch chan<- *synctool.File) {
 	log.Printf("start: %s\n", f.ID)
-	// TODO: try later
-	// n, path, err := m.Download(f.ID)
-	// if err != nil {
-	// 	log.Printf("download failed: %s\n", f.ID)
-	// 	return
-	// }
-	n, path := 100, "aaaa"
+	n, path, err := m.Download(f.ID)
+	if err != nil {
+		log.Printf("download failed: %s\n%s\n", f.ID, err)
+		ch <- f
+		return
+	}
 	log.Printf("downloaded %v bytes: %v\n", n, path)
-	f.Downloaded = true
 }
 
-func encode(f *synctool.File) {
+func encode(m *synctool.Manager, f *synctool.File) {
 	log.Printf("encoding: %s\n", f.Path)
-	f.Encoded = true
+	err := m.Encode(f.ID)
+	if err != nil {
+		log.Printf("encode failed: %s\n%s\n", f.ID, err)
+		return
+	}
+	log.Printf("encoded %s\n", f.Path)
 }
 
-func upload(f *synctool.File) {
+func upload(m *synctool.Manager, f *synctool.File) {
 	encodedPath := f.Path + ".mp4"
-	log.Printf("uploading: %s\n", encodedPath)
+	df, err := m.Upload(encodedPath, "", []string{synctool.UploadTargetFolderID})
+	if err != nil {
+		log.Printf("upload failed: %v\n%v\n", f.ID, err)
+	}
+	log.Printf("uploaded %v\n%v\n", encodedPath, fmt.Sprintf(synctool.GoogleDriveOpenURL, df.Id))
 }
