@@ -117,6 +117,7 @@ func (m *Manager) FindFiles() ([]drive.File, error) {
 	return files, nil
 }
 
+// FindNewFiles checks new files uploaded on Google Drive and returns those.
 func (m *Manager) FindNewFiles() ([]*File, error) {
 	files, err := m.FindFiles()
 	if err != nil {
@@ -197,6 +198,7 @@ func (m *Manager) Download(id string) (int64, string, error) {
 	return n, path, nil
 }
 
+// Encode start encoding using ffmpeg.
 func (m *Manager) Encode(id string) error {
 	mf := m.GetFile(id)
 	args := []string{
@@ -227,7 +229,7 @@ func (m *Manager) Encode(id string) error {
 	return nil
 }
 
-// Perge removes all processed file instance from Manager.Files and delete all processed files from file system.
+// Perge removes all processed file instance from files field and delete all processed files from file system.
 func (m *Manager) Perge() error {
 	left := make([]*File, len(m.files))
 	for _, f := range m.files {
@@ -244,10 +246,12 @@ func (m *Manager) Perge() error {
 	return nil
 }
 
+// NumFiles returns number of instance in files field.
 func (m *Manager) NumFiles() int {
 	return len(m.files)
 }
 
+// GetFile returns File instance with id from files field.
 func (m *Manager) GetFile(id string) *File {
 	for _, f := range m.files {
 		if f.ID == id {

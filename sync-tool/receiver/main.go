@@ -23,8 +23,11 @@ import (
 )
 
 const (
-	PollInterval  = 10 * time.Second
-	PergeInterval = 1 * time.Minute
+	// Pollinterval is the interval to confirm newly uploaded files.
+	PollInterval = 10 * time.Minute
+
+	// PergeInterval is the interval to perge processed files.
+	PergeInterval = 1 * time.Hour
 )
 
 func main() {
@@ -37,6 +40,7 @@ func main() {
 	t := time.NewTicker(PollInterval)
 	pt := time.NewTicker(PergeInterval)
 	ch := make(chan *synctool.File, 20)
+	checkNewFile(m, ch)
 	for {
 		select {
 		case c := <-t.C:
