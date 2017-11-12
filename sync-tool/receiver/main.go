@@ -96,6 +96,13 @@ func upload(m *synctool.Manager, f *synctool.File) {
 	df, err := m.Upload(encodedPath, "", []string{synctool.UploadTargetFolderID})
 	if err != nil {
 		log.Printf("upload failed: %v\n%v\n", f.ID, err)
+		return
 	}
 	log.Printf("uploaded %v\n%v\n", encodedPath, fmt.Sprintf(synctool.GoogleDriveOpenURL, df.Id))
+	err = m.Move(f.ID)
+	if err != nil {
+		log.Printf(" move failed: %s\n%s\n", f.ID, err)
+		return
+	}
+	log.Printf("moved %s to encode done folder\n", f.Path)
 }

@@ -198,6 +198,15 @@ func (m *Manager) Download(id string) (int64, string, error) {
 	return n, path, nil
 }
 
+// Move transfers a file from upload target folder to encode done folder.
+func (m *Manager) Move(id string) error {
+	_, err := m.service.Files.Update(id, nil).AddParents(EncodeDoneFolderID).RemoveParents(UploadTargetFolderID).Do()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Encode start encoding using ffmpeg.
 func (m *Manager) Encode(id string) error {
 	mf := m.GetFile(id)
