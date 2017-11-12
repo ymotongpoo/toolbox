@@ -33,8 +33,11 @@ const (
 	// UploadTargetFolderID is the ID of Google Drive folder where sender put the file to.
 	UploadTargetFolderID = "1QaF-81k04ieUk4RB97PU1eALP0JnXN4S"
 
-	// EncodeDoneFolderID is the ID of Google Drive Folder where the files are sent to after encoding process.
+	// EncodeDoneFolderID is the ID of Google Drive folder where the original files are sent to after encoding process.
 	EncodeDoneFolderID = "1i0GSCuF10lW1sx3A_vDGbvjAKIxPS2yM"
+
+	// MP4TargetFolderID is the ID of Google Drive folder where encoded mp4 files are sent to.
+	MP4TargetFolderID = "0B_fYUdOGrPfiUnR3aWVPMElHcjg"
 
 	// DefaultSecretsFile is the filename of JSON file where OAuth2 secrets are recorded.
 	// This file is available on https://console.developers.google.com/.
@@ -211,22 +214,22 @@ func (m *Manager) Move(id string) error {
 func (m *Manager) Encode(id string) error {
 	mf := m.GetFile(id)
 	args := []string{
-		fmt.Sprintf("-i %s", mf.Path),
-		"-crf 20.0",
-		"-vcodec libx264 -vf scale=1920:1080",
-		"-preset slow",
-		"-acodec aac -strict experimental",
-		"-ar 48000 -b:a 192k",
-		"-coder 1",
-		"-flags +loop",
-		"-cmp chroma -partitions +parti4x4+partp8x8+partb8x8",
-		"-me_method hex -subq 6 -me_range 16 -g 60",
-		"-keyint_min 25",
-		"-sc_threshold 35",
-		"-i_qfactor 0.71",
-		"-b_strategy 1",
-		"-threads 0",
-		"-f mp4",
+		"-i", fmt.Sprintf("'%s'", mf.Path),
+		"-crf", "20.0",
+		"-vcodec", "libx264", "-vf", "scale=1920:1080",
+		"-preset", "slow",
+		"-acodec", "aac", "-strict", "experimental",
+		"-ar", "48000", "-b:a", "192k",
+		"-coder", "1",
+		"-flags", "+loop",
+		"-cmp", "chroma", "-partitions", "+parti4x4+partp8x8+partb8x8",
+		"-me_method", "hex", "-subq", "6", "-me_range", "16", "-g", "60",
+		"-keyint_min", "25",
+		"-sc_threshold", "35",
+		"-i_qfactor", "0.71",
+		"-b_strategy", "1",
+		"-threads", "0",
+		"-f", "mp4",
 		fmt.Sprintf("%s.mp4", mf.Path),
 	}
 	cmd := exec.Command("ffmpeg", args...)
@@ -244,6 +247,10 @@ func (m *Manager) Perge() error {
 	for _, f := range m.files {
 		if f.Downloaded && f.Encoded {
 			err := os.Remove(f.Path)
+			if err != nil {
+				return err
+			}
+			err := os.Remove(f.Path + ".mp4")
 			if err != nil {
 				return err
 			}

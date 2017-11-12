@@ -15,31 +15,54 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/ymotongpoo/toolbox/sync-tool"
 )
 
 const (
-	// Pollinterval is the interval to confirm newly uploaded files.
-	PollInterval = 10 * time.Minute
+	// DefaultPollinterval is the interval to confirm newly uploaded files.
+	DefaultPollInterval = 10 * time.Minute
 
-	// PergeInterval is the interval to perge processed files.
-	PergeInterval = 1 * time.Hour
+	// DefaultPergeInterval is the interval to perge processed files.
+	DefaultPergeInterval = 1 * time.Hour
 )
 
+var (
+	fs            *flag.FlagSet
+	pollInterval  *time.Duration
+	pergeInterval *time.Duration
+	secretsPath   *string
+)
+
+func init() {
+	fs = flag.NewFlagSet("base", flag.ExitOnError)
+	pollInterval = fs.Duration("poll", DefaultPollInterval, "polling interval duration")
+	pergeInterval = fs.Duration("perge", DefaultPergeInterval, "perge interval duration")
+	secretsPath = fs.String("secrets", synctool.DefaultSecretsFile, "path to client_secret.json file")
+}
+
+func checkOptions() {
+	log.Printf("poll interval is set to %s\n", *pollInterval)
+	log.Printf("perge interval is set to %s\n", *pergeInterval)
+}
+
 func main() {
-	m := synctool.NewManager(synctool.DefaultSecretsFile)
+	fs.Parse(os.Args[1:])
+	checkOptions()
+	m := synctool.NewManager(*secretsPath)
 	err := m.Init()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	t := time.NewTicker(PollInterval)
-	pt := time.NewTicker(PergeInterval)
-	ch := make(chan *synctool.File, 20)
+	t := time.NewTicker(*pollInterval)
+	pt := time.NewTicker(*pergeInterval)
+	ch := make(chan *synctool.File, 100)
 	checkNewFile(m, ch)
 	for {
 		select {
@@ -93,7 +116,7 @@ func encode(m *synctool.Manager, f *synctool.File) {
 
 func upload(m *synctool.Manager, f *synctool.File) {
 	encodedPath := f.Path + ".mp4"
-	df, err := m.Upload(encodedPath, "", []string{synctool.UploadTargetFolderID})
+	df, err := m.Upload(encodedPath, "", []string{synctool.MP4TargetFolderID})
 	if err != nil {
 		log.Printf("upload failed: %v\n%v\n", f.ID, err)
 		return
@@ -101,7 +124,7 @@ func upload(m *synctool.Manager, f *synctool.File) {
 	log.Printf("uploaded %v\n%v\n", encodedPath, fmt.Sprintf(synctool.GoogleDriveOpenURL, df.Id))
 	err = m.Move(f.ID)
 	if err != nil {
-		log.Printf(" move failed: %s\n%s\n", f.ID, err)
+		log.Printf("move failed: %s\n%s\n", f.ID, err)
 		return
 	}
 	log.Printf("moved %s to encode done folder\n", f.Path)
