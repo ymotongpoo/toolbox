@@ -130,6 +130,9 @@ func (m *Manager) FindNewFiles() ([]*File, error) {
 loop:
 	for _, f := range files {
 		for _, mf := range m.files {
+			if mf == nil {
+				continue
+			}
 			if f.Id == mf.ID {
 				continue loop
 			}
