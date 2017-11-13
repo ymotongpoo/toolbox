@@ -214,7 +214,7 @@ func (m *Manager) Move(id string) error {
 func (m *Manager) Encode(id string) error {
 	mf := m.GetFile(id)
 	args := []string{
-		"-i", fmt.Sprintf("'%s'", mf.Path),
+		"-i", fmt.Sprintf("%s", mf.Path),
 		"-crf", "20.0",
 		"-vcodec", "libx264", "-vf", "scale=1920:1080",
 		"-preset", "slow",
@@ -233,7 +233,17 @@ func (m *Manager) Encode(id string) error {
 		fmt.Sprintf("%s.mp4", mf.Path),
 	}
 	cmd := exec.Command("ffmpeg", args...)
-	err := cmd.Run()
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	go io.Copy(os.Stdout, stdout)
+	go io.Copy(os.Stderr, stderr)
+	err = cmd.Run()
 	if err != nil {
 		return err
 	}
@@ -250,7 +260,7 @@ func (m *Manager) Perge() error {
 			if err != nil {
 				return err
 			}
-			err := os.Remove(f.Path + ".mp4")
+			err = os.Remove(f.Path + ".mp4")
 			if err != nil {
 				return err
 			}

@@ -44,7 +44,7 @@ func getHTTPClient(ctx context.Context, config *oauth2.Config) (*http.Client, er
 }
 
 func getToken(cache string, config *oauth2.Config) (*oauth2.Token, error) {
-	f, err := os.Open(cache)
+	f, err := os.Create(cache)
 	if err != nil {
 		return nil, err
 	}
