@@ -94,6 +94,10 @@ func checkNewFile(m *synctool.Manager, ch chan<- *synctool.File) {
 }
 
 func download(m *synctool.Manager, f *synctool.File, ch chan<- *synctool.File) {
+	if f == nil {
+		log.Println("download: f is nil")
+		return
+	}
 	log.Printf("start: %s\n", f.ID)
 	n, path, err := m.Download(f.ID)
 	if err != nil {
@@ -105,6 +109,10 @@ func download(m *synctool.Manager, f *synctool.File, ch chan<- *synctool.File) {
 }
 
 func encode(m *synctool.Manager, f *synctool.File) {
+	if f == nil {
+		log.Println("encode: f is nil")
+		return
+	}
 	log.Printf("encoding: %s\n", f.Path)
 	err := m.Encode(f.ID)
 	if err != nil {
@@ -115,6 +123,10 @@ func encode(m *synctool.Manager, f *synctool.File) {
 }
 
 func upload(m *synctool.Manager, f *synctool.File) {
+	if f == nil {
+		log.Println("upload: f is nil")
+		return
+	}
 	encodedPath := f.Path + ".mp4"
 	df, err := m.Upload(encodedPath, "", []string{synctool.MP4TargetFolderID})
 	if err != nil {
