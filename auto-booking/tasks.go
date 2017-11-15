@@ -31,17 +31,22 @@ const (
 	ProgramPath        = `//*[@id="tvpgm"]/table/tbody/tr/td/table/tbody/tr/td/span/a`
 )
 
-func fetchPrograms() chromedp.Tasks {
+func fetchPrograms(c *chromedp.CDP) ([]*cdp.Node, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ctx, subcancel = context.WithTimeout(ctx, 25*time.Second)
-	defer subcancel()
 
 	// find sample of chromedp.Node()
 	// https://godoc.org/github.com/knq/chromedp#Nodes
 	// https://github.com/knq/chromedp/blob/master/examples/logic/main.go
-	return chromedp.Tasks{
+	programs := []*cdp.Node{}
+	tasks := chromedp.Tasks{
 		chromedp.Navigate(TDMBProgramList),
 		chromedp.WaitVisible(ProgramWaitVisible),
+		chromedp.Nodes(ProgramPath, &programs),
 	}
+	err := c.Run(ctx, tasks)
+	if err != nil {
+		return nil, err
+	}
+	return programs, nil
 }

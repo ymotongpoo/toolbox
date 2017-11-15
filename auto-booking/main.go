@@ -17,26 +17,29 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"time"
 
 	"github.com/knq/chromedp"
-	"github.com/knq/chromedp/cdp"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	c, err := chromedp.New(ctx, chromedp.WithLog(log.Printf))
+	ctx, subcancel := context.WithTimeout(ctx, 25*time.Second)
+	defer subcancel()
+	c, err := chromedp.New(ctx, chromedp.WithErrorf(log.Printf))
 	if err != nil {
 		log.Fatalln(err)
 	}
-	var site, res string
-	err = c.Run(ctx, googleSearch("site:brank.as", "Home", &site, &res))
+	nodes, err := fetchPrograms(c)
 	if err != nil {
 		log.Fatalln(err)
+	}
+	var text string
+	for i, n := range nodes {
+		c.Run(ctx, chromedp.Text(n, &text))
+		fmt.Println(i, text)
 	}
 	err = c.Shutdown(ctx)
 	if err != nil {
@@ -45,28 +48,5 @@ func main() {
 	err = c.Wait()
 	if err != nil {
 		log.Fatalln(err)
-	}
-	log.Printf("saved screenshot from search result listing `%s` (%s)\n", res, site)
-}
-
-func googleSearch(q, text string, site, res *string) chromedp.Tasks {
-	var buf []byte
-	sel := fmt.Sprintf(`//a[text()[contains(., '%s')]]`, text)
-	return chromedp.Tasks{
-		chromedp.Navigate(`https://www.google.com/`),
-		chromedp.WaitVisible(`#hplogo`, chromedp.ByID),
-		chromedp.SendKeys(`#lst-ib`, q+"\n", chromedp.ByID),
-		chromedp.WaitVisible(`#res`, chromedp.ByID),
-		chromedp.Text(sel, res),
-		chromedp.Click(sel),
-		chromedp.WaitVisible(`a[href="/brankas-for-business"]`, chromedp.ByQuery),
-		chromedp.WaitNotVisible(`.preloader-content`, chromedp.ByQuery),
-		chromedp.Location(site),
-		chromedp.ScrollIntoView(`.banner-section.third-section`, chromedp.ByQuery),
-		chromedp.Sleep(2 * time.Second), // wait for animation to finish
-		chromedp.Screenshot(`.banner-section.third-section`, &buf, chromedp.ByQuery),
-		chromedp.ActionFunc(func(context.Context, cdp.Handler) error {
-			return ioutil.WriteFile("screenshot.png", buf, 0644)
-		}),
 	}
 }
