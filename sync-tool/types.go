@@ -256,7 +256,7 @@ func (m *Manager) Encode(id string) error {
 
 // Perge removes all processed file instance from files field and delete all processed files from file system.
 func (m *Manager) Perge() error {
-	left := make([]*File, len(m.files))
+	left := []*File{}
 	for _, f := range m.files {
 		if f.Downloaded && f.Encoded {
 			err := os.Remove(f.Path)
@@ -283,7 +283,7 @@ func (m *Manager) NumFiles() int {
 // GetFile returns File instance with id from files field.
 func (m *Manager) GetFile(id string) *File {
 	for _, f := range m.files {
-		if f.ID == id {
+		if f != nil && f.ID == id {
 			return f
 		}
 	}

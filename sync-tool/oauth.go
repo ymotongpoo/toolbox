@@ -44,7 +44,7 @@ func getHTTPClient(ctx context.Context, config *oauth2.Config) (*http.Client, er
 }
 
 func getToken(cache string, config *oauth2.Config) (*oauth2.Token, error) {
-	f, err := os.Create(cache)
+	f, err := os.Open(cache)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func getToken(cache string, config *oauth2.Config) (*oauth2.Token, error) {
 
 func saveToken(path string, token *oauth2.Token) error {
 	fmt.Printf("Saving credential to %s\n", path)
-	f, err := os.Create(path)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		return err
 	}
