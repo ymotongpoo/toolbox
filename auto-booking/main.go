@@ -21,32 +21,49 @@ import (
 	"time"
 
 	"github.com/knq/chromedp"
+	"github.com/knq/chromedp/cdp"
 )
 
+
 func main() {
+	var err error
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ctx, subcancel := context.WithTimeout(ctx, 25*time.Second)
-	defer subcancel()
 	c, err := chromedp.New(ctx, chromedp.WithErrorf(log.Printf))
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal(err)
 	}
-	nodes, err := nodeValueTest(ctx, c)
+	res, err := getTitle(ctx, c)
 	if err != nil {
-		log.Fatalln(err)
-	}
-	var text string
-	for i, n := range nodes {
-		c.Run(ctx, chromedp.Text(n, &text))
-		fmt.Println(i, text)
+		log.Fatalf("could not list awesome go projects: %v", err)
 	}
 	err = c.Shutdown(ctx)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal(err)
 	}
 	err = c.Wait()
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal(err)
 	}
+	log.Println(res)
+}
+
+func getTitle(ctx context.Context, c *chromedp.CDP) (string, error) {
+	var cancel func()
+	ctx, cancel = context.WithTimeout(ctx, 25*time.Second)
+	defer cancel()
+	if err := c.Run(ctx, chromedp.Navigate(`http://kh31n.hatenablog.jp/entry/2017/04/09/172247`)); err != nil {
+		return "", fmt.Errorf("could not navigate to github: %v", err)
+	}
+	if err := c.Run(ctx, chromedp.WaitVisible(`//*[@id="entry-10328749687235837314"]/div/header/h1/a`)); err != nil {
+		return "", fmt.Errorf("could not get section: %v", err)
+	}
+
+	// get project link text
+	var projects []*cdp.Node
+	if err := c.Run(ctx, chromedp.Nodes(`//*[@id="entry-10328749687235837314"]/div/header/h1/a/text()`, &projects)); err != nil {
+		return "", fmt.Errorf("could not get projects: %v", err)
+	}
+
+	return projects[0].NodeValue, nil
 }

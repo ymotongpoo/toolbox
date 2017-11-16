@@ -51,16 +51,3 @@ func fetchPrograms(ctx context.Context, c *chromedp.CDP) ([]*cdp.Node, error) {
 	return programs, nil
 }
 
-func nodeValueTest(ctx context.Context, c *chromedp.CDP) ([]*cdp.Node, error) {
-	title := []*cdp.Node{}
-	tasks := chromedp.Tasks{
-		chromedp.Navigate("http://kh31n.hatenablog.jp/entry/2017/04/09/172247"),
-		chromedp.WaitVisible(`//*[@id="entry-10328749687235837314"]/div/header/h1/a`),
-		chromedp.Nodes(`//*[@id="entry-10328749687235837314"]/div/header/h1/a::text()`, &title),
-	}
-	err := c.Run(ctx, tasks)
-	if err == nil {
-		return nil, err
-	}
-	return title, nil
-}
