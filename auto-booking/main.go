@@ -32,7 +32,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	nodes, err := fetchPrograms(c)
+	nodes, err := nodeValueTest(ctx, c)
 	if err != nil {
 		log.Fatalln(err)
 	}
