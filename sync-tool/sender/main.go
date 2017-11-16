@@ -15,15 +15,32 @@
 package main
 
 import (
+	"flag"
 	"log"
+	"os"
+	"time"
 
 	"github.com/rjeczalik/notify"
 	"github.com/ymotongpoo/toolbox/sync-tool"
 )
 
-func main() {
-	c := make(chan notify.EventInfo, 1)
+var (
+	fs            *flag.FlagSet
+	pergeInterval *time.Duration
+	secretsPath   *string
+)
 
+const PergeDuration = 1 * time.Hour
+
+func init() {
+	fs = flag.NewFlagSet("base", flag.ExitOnError)
+	pergeInterval = fs.Duration("perge", DefaultPergeInterval, "perge interval duration")
+	secretsPath = fs.String("secrets", synctool.DefaultSecretsFile, "path to client_secret.json")
+}
+
+func main() {
+	fs.Parse(os.Args[1:])
+	c := make(chan notify.EventInfo, 1)
 	eventList := []notify.Event{
 		notify.InCreate,
 		notify.InCloseWrite,
@@ -33,6 +50,7 @@ func main() {
 	}
 	defer notify.Stop(c)
 
+	tick := time.NewTicker(PergeDuration)
 	m := synctool.NewManager(synctool.DefaultSecretsFile) // TODO: replace file name with cli args
 	err := m.Init()
 	if err != nil {
@@ -40,12 +58,17 @@ func main() {
 	}
 
 	for {
-		switch ei := <-c; ei.Event() {
-		case notify.InCloseWrite:
-			log.Printf("Writing to %s is done!", ei.Path())
-			go upload(m, ei)
-		case notify.InCreate:
-			log.Printf("File %s is created!", ei.Path())
+		select {
+		case ei := <-c:
+			switch {
+			case ei.Event() == notify.InCloseWrite:
+				log.Printf("Writing to %s is done!", ei.Path())
+				go upload(m, ei)
+			case ei.Event() == notify.InCreate:
+				log.Printf("File %s is created!", ei.Path())
+			}
+		case <-tick.C:
+			perge()
 		}
 	}
 }
@@ -57,4 +80,7 @@ func upload(m *synctool.Manager, ei notify.EventInfo) {
 	} else {
 		log.Print(synctool.Loginfo(res))
 	}
+	f := synctool.NewFile(ei.Path(), res.Id)
+	f.Uploaded = true
+	m.AddFile(f)
 }

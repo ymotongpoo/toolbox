@@ -61,6 +61,7 @@ type File struct {
 	Downloaded  bool
 	Encoded     bool
 	EncodedPath string
+	Uploaded    bool
 }
 
 func NewFile(path, id string) *File {
@@ -70,6 +71,7 @@ func NewFile(path, id string) *File {
 		Downloaded:  false,
 		Encoded:     false,
 		EncodedPath: "",
+		Uploaded:    false,
 	}
 }
 
@@ -162,7 +164,12 @@ func (m *Manager) Upload(path, desc string, parents []string) (*drive.File, erro
 	if err != nil {
 		return nil, err
 	}
+
 	return res, nil
+}
+
+func (m *Manager) AddFile(f *File) {
+	m.files = append(m.files, f)
 }
 
 // Download fetches and creates a file from the path to current directory.
@@ -197,6 +204,7 @@ func (m *Manager) Download(id string) (int64, string, error) {
 			Downloaded:  true,
 			Encoded:     false,
 			EncodedPath: "",
+			Uploaded:    false,
 		}
 		m.files = append(m.files, mf)
 	}
@@ -273,6 +281,31 @@ func (m *Manager) Perge() error {
 	}
 	m.files = left
 	return nil
+}
+
+// SenderPerge checks if the file is uploaded and in encode done folder.
+// If both are satisfiled, removes the original ts file.
+func (m *Manager) SenderPerge() error {
+	query := fmt.Sprintf("'%s' in parents", EncodeDoneFolderID)
+	fl, err := m.service.Files.List().Q(query).Do()
+	if err {
+		return err
+	}
+
+	left := []*File{}
+	// TODO: find better expression here.
+	for _, mf := range m.files {
+		if mf.Uploaded {
+			for _, f := range fl.Files {
+				if mf.ID == f.Id {
+					err := os.Remove(mf.Path)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
 }
 
 // NumFiles returns number of instance in files field.
