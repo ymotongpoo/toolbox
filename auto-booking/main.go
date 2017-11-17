@@ -15,55 +15,52 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"log"
-	"time"
+	"os"
+	"path/filepath"
+	"strings"
 
-	"github.com/knq/chromedp"
-	"github.com/knq/chromedp/cdp"
+	"github.com/tebeka/selenium"
 )
 
+const (
+	port = 9888
+)
 
-func main() {
-	var err error
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	c, err := chromedp.New(ctx, chromedp.WithErrorf(log.Printf))
-	if err != nil {
-		log.Fatal(err)
+func findChromeDriver() string {
+	pathStr := os.Getenv("PATH")
+	paths := strings.Split(pathStr, ":")
+	for _, p := range paths {
+		path := filepath.Join(p, "chromedriver")
+		file, err := os.Stat(path)
+		if file != nil && err == nil {
+			return path
+		}
 	}
-	res, err := getTitle(ctx, c)
-	if err != nil {
-		log.Fatalf("could not list awesome go projects: %v", err)
-	}
-	err = c.Shutdown(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = c.Wait()
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println(res)
+	return ""
 }
 
-func getTitle(ctx context.Context, c *chromedp.CDP) (string, error) {
-	var cancel func()
-	ctx, cancel = context.WithTimeout(ctx, 25*time.Second)
-	defer cancel()
-	if err := c.Run(ctx, chromedp.Navigate(`http://kh31n.hatenablog.jp/entry/2017/04/09/172247`)); err != nil {
-		return "", fmt.Errorf("could not navigate to github: %v", err)
+func main() {
+	selenium.SetDebug(true)
+	path := findChromeDriver()
+	service, err := selenium.NewChromeDriverService(path, port)
+	if err != nil {
+		fmt.Println("path: ", path)
+		panic(err) // panic is used only as an example and is not otherwise recommended.
 	}
-	if err := c.Run(ctx, chromedp.WaitVisible(`//*[@id="entry-10328749687235837314"]/div/header/h1/a`)); err != nil {
-		return "", fmt.Errorf("could not get section: %v", err)
+	defer service.Stop()
+	caps := selenium.Capabilities{"browserName": "chrome"}
+	wd, err := selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
+	if err != nil {
+		panic(err)
 	}
+	defer wd.Quit()
 
-	// get project link text
-	var projects []*cdp.Node
-	if err := c.Run(ctx, chromedp.Nodes(`//*[@id="entry-10328749687235837314"]/div/header/h1/a/text()`, &projects)); err != nil {
-		return "", fmt.Errorf("could not get projects: %v", err)
+	results, err := fetchPrograms(wd)
+	if err != nil {
+		panic(err)
 	}
-
-	return projects[0].NodeValue, nil
+	for _, r := range results {
+		fmt.Println(r.URL, r.Title)
+	}
 }

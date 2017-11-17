@@ -15,10 +15,10 @@
 package main
 
 import (
-	"context"
+	"time"
 
-	"github.com/knq/chromedp"
-	"github.com/knq/chromedp/cdp"
+	"fmt"
+	"github.com/tebeka/selenium"
 )
 
 const (
@@ -31,23 +31,48 @@ const (
 	ProgramPath        = `//*[@id="tvpgm"]/table/tbody/tr/td/table/tbody/tr/td/span/a`
 )
 
-func fetchPrograms(ctx context.Context, c *chromedp.CDP) ([]*cdp.Node, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+type Result struct {
+	URL   string
+	Title string
+}
 
-	// find sample of chromedp.Node()
-	// https://godoc.org/github.com/knq/chromedp#Nodes
-	// https://github.com/knq/chromedp/blob/master/examples/logic/main.go
-	programs := []*cdp.Node{}
-	tasks := chromedp.Tasks{
-		chromedp.Navigate(TDMBProgramList),
-		chromedp.WaitVisible(ProgramWaitVisible),
-		chromedp.Nodes(ProgramPath, &programs),
+func NewResult(url, title string) Result {
+	return Result{
+		URL:   url,
+		Title: title,
 	}
-	err := c.Run(ctx, tasks)
+}
+
+func fetchPrograms(wd selenium.WebDriver) ([]Result, error) {
+	if err := wd.Get(TDMBProgramList); err != nil {
+		return nil, err
+	}
+	cond := func(wd selenium.WebDriver) (bool, error) {
+		target, err := wd.FindElement(selenium.ByXPATH, ProgramWaitVisible)
+		if err != nil {
+			return false, err
+		}
+		return target.IsDisplayed()
+	}
+	err := wd.WaitWithTimeout(cond, 20*time.Second)
 	if err != nil {
 		return nil, err
 	}
-	return programs, nil
+	elems, err := wd.FindElements(selenium.ByXPATH, ProgramPath)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]Result, len(elems))
+	for i, e := range elems {
+		url, err := e.GetAttribute("href")
+		if err != nil {
+			fmt.Printf("error: %s", err)
+		}
+		title, err := e.Text()
+		if err != nil {
+			fmt.Printf("error: %s", err)
+		}
+		results[i] = NewResult(url, title)
+	}
+	return results, nil
 }
-
