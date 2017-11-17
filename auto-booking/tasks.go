@@ -15,9 +15,9 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
-	"fmt"
 	"github.com/tebeka/selenium"
 )
 
@@ -27,24 +27,16 @@ const (
 )
 
 const (
-	ProgramWaitVisible = `//*[@id="tvpgm"]`
-	ProgramPath        = `//*[@id="tvpgm"]/table/tbody/tr/td/table/tbody/tr/td/span/a`
+	ProgramWaitVisible   = `//*[@id="tvpgm"]`
+	ProgramPath          = `//*[@id="tvpgm"]/table/tbody/tr/td/table/tbody/tr/td/span/a`
+	DetailedPageTitle    = `//*[@id="main"]/div[1]/div/div/div[1]/h2/b`
+	DetailedPageTime     = `//*[@id="main"]/div[1]/div/div/div[1]/p/em`
+	DetailedPageProvider = `//*[@itemprop="provider"]`
 )
 
-type Result struct {
-	URL   string
-	Title string
-}
-
-func NewResult(url, title string) Result {
-	return Result{
-		URL:   url,
-		Title: title,
-	}
-}
-
-func fetchPrograms(wd selenium.WebDriver) ([]Result, error) {
-	if err := wd.Get(TDMBProgramList); err != nil {
+// fetchPrograms get all the URLs to the program detail pages and its link title.
+func fetchPrograms(wd selenium.WebDriver, url string) ([]Result, error) {
+	if err := wd.Get(url); err != nil {
 		return nil, err
 	}
 	cond := func(wd selenium.WebDriver) (bool, error) {
@@ -75,4 +67,37 @@ func fetchPrograms(wd selenium.WebDriver) ([]Result, error) {
 		results[i] = NewResult(url, title)
 	}
 	return results, nil
+}
+
+func getDetailedPage(wd selenium.WebDriver, url string) (Page, error) {
+	if err := wd.Get(url); err != nil {
+		return Page{}, err
+	}
+	elem, err := wd.FindElement(selenium.ByXPATH, DetailedPageTitle)
+	if err != nil {
+		return Page{}, err
+	}
+	title, err := elem.Text()
+	if err != nil {
+		return Page{}, err
+	}
+	elem, err = wd.FindElement(selenium.ByXPATH, DetailedPageTime)
+	if err != nil {
+		return Page{}, err
+	}
+	time, err := elem.Text()
+	if err != nil {
+		return Page{}, err
+	}
+
+	elem, err = wd.FindElement(selenium.ByXPATH, DetailedPageProvider)
+	if err != nil {
+		return Page{}, err
+	}
+	provider, err := elem.Text()
+	if err != nil {
+		return Page{}, err
+	}
+	fmt.Println(title, time, provider)
+	return Page{}, nil // TODO: replace actual implementaion.
 }

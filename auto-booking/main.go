@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/tebeka/selenium"
 )
@@ -56,11 +57,24 @@ func main() {
 	}
 	defer wd.Quit()
 
-	results, err := fetchPrograms(wd)
+	results, err := fetchPrograms(wd, TDMBProgramList)
 	if err != nil {
 		panic(err)
 	}
-	for _, r := range results {
-		fmt.Println(r.URL, r.Title)
+
+	ch := make(chan Result)
+	tick := time.NewTicker(5 * time.Second)
+	go func(results []Result, ch chan Result) {
+		for _, r := range results {
+			ch <- r
+		}
+	}(results, ch)
+
+	for {
+		select {
+		case <-tick.C:
+			r := <-ch
+			getDetailedPage(wd, r.URL)
+		}
 	}
 }
