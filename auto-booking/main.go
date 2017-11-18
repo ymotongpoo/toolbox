@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,39 +43,43 @@ func findChromeDriver() string {
 }
 
 func main() {
-	selenium.SetDebug(true)
+	// setup
+	selenium.SetDebug(false)
 	path := findChromeDriver()
 	service, err := selenium.NewChromeDriverService(path, port)
 	if err != nil {
 		fmt.Println("path: ", path)
-		panic(err) // panic is used only as an example and is not otherwise recommended.
+		log.Fatalln(err) // panic is used only as an example and is not otherwise recommended.
 	}
 	defer service.Stop()
 	caps := selenium.Capabilities{"browserName": "chrome"}
 	wd, err := selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 	defer wd.Quit()
 
-	results, err := fetchPrograms(wd, TDMBProgramList)
-	if err != nil {
-		panic(err)
-	}
-
-	ch := make(chan Result)
-	tick := time.NewTicker(5 * time.Second)
-	go func(results []Result, ch chan Result) {
-		for _, r := range results {
-			ch <- r
+	ch := make(chan Result, 10000)
+	done := make(chan bool, 1)
+	go func() {
+		err = fetchPrograms(wd, TDMBProgramList, ch, done)
+		if err != nil {
+			log.Fatalln(err)
 		}
-	}(results, ch)
-
-	for {
-		select {
-		case <-tick.C:
-			r := <-ch
-			getDetailedPage(wd, r.URL)
+		err = fetchPrograms(wd, BSProgramList, ch, done)
+		if err != nil {
+			log.Fatalln(err)
 		}
+	}()
+
+	<-done // TDMB
+	<-done // BS
+	for r := range ch {
+		p, err := getDetailedPage(wd, r.URL)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(p.Title, p.URL, p.Provider, p.Start.Format(time.RFC3339), p.End.Format(time.RFC3339))
+		time.Sleep(5 * time.Second)
 	}
 }

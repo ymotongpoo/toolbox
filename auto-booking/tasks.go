@@ -16,10 +16,14 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"strings"
 	"time"
 
 	"github.com/tebeka/selenium"
 )
+
+const Timeout = 20 * time.Second
 
 const (
 	TDMBProgramList = "https://tv.yahoo.co.jp/listings/23/"
@@ -27,77 +31,138 @@ const (
 )
 
 const (
-	ProgramWaitVisible   = `//*[@id="tvpgm"]`
-	ProgramPath          = `//*[@id="tvpgm"]/table/tbody/tr/td/table/tbody/tr/td/span/a`
-	DetailedPageTitle    = `//*[@id="main"]/div[1]/div/div/div[1]/h2/b`
-	DetailedPageTime     = `//*[@id="main"]/div[1]/div/div/div[1]/p/em`
-	DetailedPageProvider = `//*[@itemprop="provider"]`
+	ProgramWaitVisible    = `//*[@id="tvpgm"]`
+	ProgramPath           = `//*[@id="tvpgm"]/table/tbody/tr/td/table/tbody/tr/td/span/a`
+	ProgramNextPage       = `//*[@id="nexttime"]/a`
+	DetailedPageTitle     = `//*[@id="main"]/div[1]/div/div/div[1]/h2/b`
+	DetailedPageTime      = `//*[@id="main"]/div[1]/div/div/div[1]/p/em`
+	DetailedPageProvider  = `//*[@itemprop="provider"]`
+	DetailedPageProvider2 = `//*[@id="yjContentsBody"]/div[1]/div[1]/p`
 )
 
-// fetchPrograms get all the URLs to the program detail pages and its link title.
-func fetchPrograms(wd selenium.WebDriver, url string) ([]Result, error) {
-	if err := wd.Get(url); err != nil {
-		return nil, err
-	}
+// WaitForXPath
+func WaitForXPath(xpath string) selenium.Condition {
 	cond := func(wd selenium.WebDriver) (bool, error) {
-		target, err := wd.FindElement(selenium.ByXPATH, ProgramWaitVisible)
+		target, err := wd.FindElement(selenium.ByXPATH, xpath)
 		if err != nil {
 			return false, err
 		}
 		return target.IsDisplayed()
 	}
-	err := wd.WaitWithTimeout(cond, 20*time.Second)
+	return cond
+}
+
+func filterProgramWithTitle(r Result) bool {
+	patterns := programTitleFilter()
+	for _, p := range patterns {
+		if p.MatchString(r.Title) {
+			return true
+		}
+	}
+	return false
+}
+
+// fetchProgramsOn get all the URLs to the program detail pages and iss link title on a program list.
+func fetchProgramsOn(wd selenium.WebDriver, url string, ch chan<- Result) error {
+	log.Println(url)
+	if err := wd.Get(url); err != nil {
+		return err
+	}
+	err := wd.WaitWithTimeout(WaitForXPath(ProgramWaitVisible), Timeout)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	elems, err := wd.FindElements(selenium.ByXPATH, ProgramPath)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	results := make([]Result, len(elems))
-	for i, e := range elems {
+	for _, e := range elems {
 		url, err := e.GetAttribute("href")
 		if err != nil {
-			fmt.Printf("error: %s", err)
+			fmt.Printf("href error: %s\n", err)
 		}
 		title, err := e.Text()
 		if err != nil {
-			fmt.Printf("error: %s", err)
+			fmt.Printf("text error: %s\n", err)
 		}
-		results[i] = NewResult(url, title)
+		r := NewResult(url, title)
+		if filterProgramWithTitle(r) {
+			ch <- r
+		}
 	}
-	return results, nil
+	return nil
 }
 
-func getDetailedPage(wd selenium.WebDriver, url string) (Page, error) {
+// fetchPrograms repeat fetchProgramsOn for all available progrm list pages.
+func fetchPrograms(wd selenium.WebDriver, startURL string, ch chan<- Result, done chan<- bool) error {
+	if err := fetchProgramsOn(wd, startURL, ch); err != nil {
+		return err
+	}
+	curURL, err := wd.CurrentURL()
+	if err != nil {
+		return err
+	}
+	for {
+		err = wd.WaitWithTimeout(WaitForXPath(ProgramNextPage), Timeout)
+		if err != nil {
+			return err
+		}
+		elem, err := wd.FindElement(selenium.ByXPATH, ProgramNextPage)
+		if err != nil {
+			return err
+		}
+		url, err := elem.GetAttribute("href")
+		if err != nil {
+			return err
+		}
+		if url == curURL {
+			break
+		}
+		curURL = url
+		fetchProgramsOn(wd, url, ch)
+		time.Sleep(3 * time.Second)
+	}
+	done <- true
+	return nil
+}
+
+func getDetailedPage(wd selenium.WebDriver, url string) (*Page, error) {
+	if !strings.HasPrefix(url, "http") {
+		return nil, fmt.Errorf("URL must start with http(s)\n")
+	}
 	if err := wd.Get(url); err != nil {
-		return Page{}, err
+		return nil, err
+	}
+	if err := wd.WaitWithTimeout(WaitForXPath(DetailedPageTitle), Timeout); err != nil {
+		return nil, err
 	}
 	elem, err := wd.FindElement(selenium.ByXPATH, DetailedPageTitle)
 	if err != nil {
-		return Page{}, err
+		return nil, err
 	}
 	title, err := elem.Text()
 	if err != nil {
-		return Page{}, err
+		return nil, err
 	}
 	elem, err = wd.FindElement(selenium.ByXPATH, DetailedPageTime)
 	if err != nil {
-		return Page{}, err
+		return nil, err
 	}
-	time, err := elem.Text()
+	t, err := elem.Text()
 	if err != nil {
-		return Page{}, err
+		return nil, err
 	}
-
 	elem, err = wd.FindElement(selenium.ByXPATH, DetailedPageProvider)
 	if err != nil {
-		return Page{}, err
+		elem, err = wd.FindElement(selenium.ByXPATH, DetailedPageProvider2)
+		if err != nil {
+			return nil, err
+		}
 	}
 	provider, err := elem.Text()
 	if err != nil {
-		return Page{}, err
+		return nil, err
 	}
-	fmt.Println(title, time, provider)
-	return Page{}, nil // TODO: replace actual implementaion.
+	p := ProviderMap[provider]
+	return NewPage(url, title, p, t)
 }
