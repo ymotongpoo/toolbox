@@ -128,7 +128,7 @@ func fetchPrograms(wd selenium.WebDriver, startURL string, ch chan<- Result, don
 
 func getDetailedPage(wd selenium.WebDriver, url string) (*Page, error) {
 	if !strings.HasPrefix(url, "http") {
-		return nil, fmt.Errorf("URL must start with http(s)\n")
+		return nil, fmt.Errorf("URL must start with http(s)")
 	}
 	if err := wd.Get(url); err != nil {
 		return nil, err
@@ -144,6 +144,7 @@ func getDetailedPage(wd selenium.WebDriver, url string) (*Page, error) {
 	if err != nil {
 		return nil, err
 	}
+	title = replaceChar(title)
 	elem, err = wd.FindElement(selenium.ByXPATH, DetailedPageTime)
 	if err != nil {
 		return nil, err
@@ -165,4 +166,12 @@ func getDetailedPage(wd selenium.WebDriver, url string) (*Page, error) {
 	}
 	p := ProviderMap[provider]
 	return NewPage(url, title, p, t)
+}
+
+func replaceChar(s string) string {
+	s = strings.TrimSpace(s)
+	for k, v := range ReplaceCharMap {
+		s = strings.Replace(s, k, v, -1)
+	}
+	return s
 }

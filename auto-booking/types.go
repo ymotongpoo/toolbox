@@ -15,10 +15,15 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+	"log"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -74,6 +79,57 @@ var ProviderMap = map[string]Provider{
 	"BSフジ・181":   BSCX,
 }
 
+var ReplaceCharMap = map[string]string{
+	"/": "／",
+	" ": "_",
+	"<": "＜",
+	">": "＞",
+	"?": "？",
+	"(": "（",
+	")": "）",
+	"#": "＃",
+	"*": "＊",
+	"$": "＄",
+	"&": "＆",
+	"^": "＾",
+	"!": "！",
+	"@": "＠",
+	"%": "％",
+	"+": "＋",
+}
+
+const (
+	FilePrefixFormat = "20060102T1504"
+	AtCmdFormat      = "0601021504.05"
+)
+
+type Manager struct {
+	programs []*Page
+}
+
+func NewManager() *Manager {
+	programs := []*Page{}
+	return &Manager{
+		programs: programs,
+	}
+}
+
+// IsRegistered checks if the program with the ID is already registered.
+func (m *Manager) IsRegistered(id string) bool {
+	for _, p := range m.programs {
+		if p.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// Add appends Page in programs field.
+func (m *Manager) Add(p *Page) {
+	m.programs = append(m.programs, p)
+}
+
+// Page is a struct to hold TV program metadata and at Job ID.
 type Page struct {
 	ID       string
 	URL      string
@@ -81,6 +137,7 @@ type Page struct {
 	Provider Provider
 	Start    time.Time
 	End      time.Time
+	AtID     int
 }
 
 // parseTime parse the string t in time expression and returns corresponding value in time.Time
@@ -139,6 +196,7 @@ func parseTime(t string) (time.Time, time.Time, error) {
 	return s, e, nil
 }
 
+// NewPage generates a detailed program metadata instance.
 func NewPage(url, title string, provider Provider, timeStr string) (*Page, error) {
 	s, e, err := parseTime(timeStr)
 	if err != nil {
@@ -153,9 +211,66 @@ func NewPage(url, title string, provider Provider, timeStr string) (*Page, error
 		Provider: provider,
 		Start:    s,
 		End:      e,
+		AtID:     0,
 	}, nil
 }
 
-func (p Page) Duration() time.Duration {
-	return p.End.Sub(p.Start)
+// Duration returns the length of period between start time and end time in seconds.
+func (p *Page) Duration() int {
+	return int(p.End.Sub(p.Start) / time.Second)
+}
+
+// Book issues recpt1 command with at command support for scheduling.
+func (p *Page) Book() {
+	prefix := p.Start.Format(FilePrefixFormat)
+	filename := fmt.Sprintf("%s-%s.ts", prefix, p.Title)
+	duration := strconv.Itoa(p.Duration())
+	recpt1Str := []string{"recpt1", "--b25", "--sid", "hd", "--strip", string(p.Provider), duration, filename}
+	recpt1Cmd := exec.Command("echo", recpt1Str...)
+	startTime := p.Start.Format(AtCmdFormat)
+	atCmd := exec.Command("at", "-t", startTime)
+
+	pr, pw := io.Pipe()
+	recpt1Cmd.Stdout = pw
+	atCmd.Stdin = pr
+	stderr, err := atCmd.StderrPipe()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	err = recpt1Cmd.Start()
+	if err != nil {
+		log.Fatalf("%v\n%v\n", err, strings.Join(recpt1Str, " "))
+	}
+	err = atCmd.Start()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	recpt1Cmd.Wait()
+	pw.Close()
+	scanner := bufio.NewScanner(stderr)
+	for scanner.Scan() {
+		line := scanner.Text()
+		id := parseAtID(line)
+		if id != 0 {
+			p.AtID = id
+		}
+	}
+	err = atCmd.Wait()
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+}
+
+// parseAtID parse the stderr of at command and find at job ID from the output.
+func parseAtID(s string) int {
+	pattern := regexp.MustCompile(`job ([0-9]+) at (Sun|Mon|Tue|Wed|Thu|Fri|Sat) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2} \d{1,2}:\d{1,2}:\d{1,2} \d{4}`)
+	m := pattern.FindStringSubmatch(s)
+	if len(m) > 1 {
+		id, err := strconv.Atoi(m[1])
+		if err != nil {
+			log.Fatalln(err)
+		}
+		return id
+	}
+	return 0
 }

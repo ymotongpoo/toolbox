@@ -52,3 +52,21 @@ func Test_parseTime(t *testing.T) {
 		}
 	}
 }
+func Test_parseAtID(t *testing.T) {
+	in := []string{
+		"job 1 at Sun Nov 19 14:25:00 2017",
+		"job 24 at Sun Nov 19 21:06:00 2017",
+		"job 10773 at Fri Nov 24 14:20:00 2017",
+	}
+	want := []int{
+		1,
+		24,
+		10773,
+	}
+	for i, r := range in {
+		id := parseAtID(r)
+		if id != want[i] {
+			t.Fatalf("want: %d, out: %d", want[i], id)
+		}
+	}
+}

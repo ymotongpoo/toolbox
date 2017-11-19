@@ -26,7 +26,8 @@ import (
 )
 
 const (
-	port = 9888
+	port     = 9888
+	interval = 3 * 24 * time.Hour
 )
 
 func findChromeDriver() string {
@@ -43,6 +44,18 @@ func findChromeDriver() string {
 }
 
 func main() {
+	ticker := time.NewTicker(interval)
+	m := NewManager()
+	batch(m)
+	for {
+		select {
+		case <-ticker.C:
+			batch(m)
+		}
+	}
+}
+
+func batch(m *Manager) {
 	// setup
 	selenium.SetDebug(false)
 	path := findChromeDriver()
@@ -66,10 +79,12 @@ func main() {
 		if err != nil {
 			log.Fatalln(err)
 		}
+		time.Sleep(3 * time.Second)
 		err = fetchPrograms(wd, BSProgramList, ch, done)
 		if err != nil {
 			log.Fatalln(err)
 		}
+		close(ch)
 	}()
 
 	<-done // TDMB
@@ -79,7 +94,11 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println(p.Title, p.URL, p.Provider, p.Start.Format(time.RFC3339), p.End.Format(time.RFC3339))
+		if !m.IsRegistered(p.ID) {
+			p.Book()
+			fmt.Printf("Job ID: %v -> %v %v (%v ~ %v)\n", p.AtID, p.Title, p.Provider, p.Start, p.End)
+			m.Add(p)
+		}
 		time.Sleep(5 * time.Second)
 	}
 }
