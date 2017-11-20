@@ -101,6 +101,7 @@ var ReplaceCharMap = map[string]string{
 const (
 	FilePrefixFormat = "20060102T1504"
 	AtCmdFormat      = "0601021504.05"
+	pergeTargetLine  = -4 * 24 * time.Hour
 )
 
 type Manager struct {
@@ -127,6 +128,18 @@ func (m *Manager) IsRegistered(id string) bool {
 // Add appends Page in programs field.
 func (m *Manager) Add(p *Page) {
 	m.programs = append(m.programs, p)
+}
+
+// Purge deletss obsolete data stored in programs field.
+func (m *Manager) Purge() {
+	deadline := time.Now().Add(pergeTargetLine)
+	purged := []*Page{}
+	for _, p := range m.programs {
+		if p.End.After(deadline) {
+			purged = append(purged, p)
+		}
+	}
+	m.programs = purged
 }
 
 // Page is a struct to hold TV program metadata and at Job ID.

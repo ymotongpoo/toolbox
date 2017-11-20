@@ -26,8 +26,9 @@ import (
 )
 
 const (
-	port     = 9888
-	interval = 3 * 24 * time.Hour
+	port          = 9888
+	batchInterval = 3 * 24 * time.Hour
+	purgeInterval = 4 * 24 * time.Hour
 )
 
 func findChromeDriver() string {
@@ -44,13 +45,16 @@ func findChromeDriver() string {
 }
 
 func main() {
-	ticker := time.NewTicker(interval)
+	batchT := time.NewTicker(batchInterval)
+	purgeT := time.NewTicker(purgeInterval)
 	m := NewManager()
 	batch(m)
 	for {
 		select {
-		case <-ticker.C:
+		case <-batchT.C:
 			batch(m)
+		case <-purgeT.C:
+			m.Purge()
 		}
 	}
 }
