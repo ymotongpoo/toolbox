@@ -93,6 +93,13 @@ func batch(m *Manager) {
 
 	<-done // TDMB
 	<-done // BS
+
+	now := time.Now().Format(FilePrefixFormat)
+
+	file, err := os.Create(now + ".log")
+	if err != nil {
+		log.Println(err)
+	}
 	for r := range ch {
 		p, err := getDetailedPage(wd, r.URL)
 		if err != nil {
@@ -100,7 +107,9 @@ func batch(m *Manager) {
 		}
 		if !m.IsRegistered(p.ID) {
 			p.Book()
-			fmt.Printf("Job ID: %v -> %v %v (%v ~ %v)\n", p.AtID, p.Title, p.Provider, p.Start, p.End)
+			if file != nil {
+				fmt.Fprintf(file, "Job ID: %v -> %v %v (%v ~ %v)\n", p.AtID, p.Title, p.Provider, p.Start, p.End)
+			}
 			m.Add(p)
 		}
 		time.Sleep(5 * time.Second)
