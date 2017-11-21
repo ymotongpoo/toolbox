@@ -170,9 +170,11 @@ func (m *Manager) Upload(path, desc string, parents []string) (*drive.File, erro
 
 func (m *Manager) SenderUpload() {
 	for _, f := range m.files {
-		_, err := m.Upload(f.Path, "", []string{UploadTargetFolderID})
-		if err == nil {
-			f.Uploaded = true
+		if !f.Uploaded {
+			_, err := m.Upload(f.Path, "", []string{UploadTargetFolderID})
+			if err == nil {
+				f.Uploaded = true
+			}
 		}
 	}
 }
