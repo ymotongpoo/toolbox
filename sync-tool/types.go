@@ -168,6 +168,15 @@ func (m *Manager) Upload(path, desc string, parents []string) (*drive.File, erro
 	return res, nil
 }
 
+func (m *Manager) SenderUpload() {
+	for _, f := range m.files {
+		_, err := m.Upload(f.Path, "", []string{UploadTargetFolderID})
+		if err == nil {
+			f.Uploaded = true
+		}
+	}
+}
+
 func (m *Manager) AddFile(f *File) {
 	m.files = append(m.files, f)
 }
@@ -288,7 +297,7 @@ func (m *Manager) Perge() error {
 func (m *Manager) SenderPerge() error {
 	query := fmt.Sprintf("'%s' in parents", EncodeDoneFolderID)
 	fl, err := m.service.Files.List().Q(query).Do()
-	if err {
+	if err != nil {
 		return err
 	}
 
@@ -304,8 +313,11 @@ func (m *Manager) SenderPerge() error {
 					}
 				}
 			}
+			left = append(left, mf)
 		}
 	}
+	m.files = left
+	return nil
 }
 
 // NumFiles returns number of instance in files field.

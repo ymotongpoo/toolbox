@@ -30,7 +30,9 @@ var (
 	secretsPath   *string
 )
 
-const PergeDuration = 1 * time.Hour
+const (
+	DefaultPergeInterval = 1 * time.Hour
+)
 
 func init() {
 	fs = flag.NewFlagSet("base", flag.ExitOnError)
@@ -50,7 +52,7 @@ func main() {
 	}
 	defer notify.Stop(c)
 
-	tick := time.NewTicker(PergeDuration)
+	tick := time.NewTicker(*pergeInterval)
 	m := synctool.NewManager(synctool.DefaultSecretsFile) // TODO: replace file name with cli args
 	err := m.Init()
 	if err != nil {
@@ -63,24 +65,32 @@ func main() {
 			switch {
 			case ei.Event() == notify.InCloseWrite:
 				log.Printf("Writing to %s is done!", ei.Path())
-				go upload(m, ei)
+				go upload(m, ei.Path())
 			case ei.Event() == notify.InCreate:
 				log.Printf("File %s is created!", ei.Path())
 			}
 		case <-tick.C:
-			perge()
+			update(m)
 		}
 	}
 }
 
-func upload(m *synctool.Manager, ei notify.EventInfo) {
-	res, err := m.Upload(ei.Path(), "", []string{synctool.UploadTargetFolderID})
+func upload(m *synctool.Manager, path string) {
+	res, err := m.Upload(path, "", []string{synctool.UploadTargetFolderID})
 	if err != nil {
-		log.Print(err)
+		log.Println(err)
 	} else {
-		log.Print(synctool.Loginfo(res))
+		log.Println(synctool.Loginfo(res))
 	}
-	f := synctool.NewFile(ei.Path(), res.Id)
+	f := synctool.NewFile(path, res.Id)
 	f.Uploaded = true
 	m.AddFile(f)
+}
+
+func update(m *synctool.Manager) {
+	err := m.SenderPerge()
+	if err != nil {
+		log.Println(err)
+	}
+	m.SenderUpload()
 }
