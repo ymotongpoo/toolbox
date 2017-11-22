@@ -92,5 +92,6 @@ func update(m *synctool.Manager) {
 	if err != nil {
 		log.Println(err)
 	}
-	m.SenderUpload()
+	// TODO: SenderUpload is uploading already uploaded videos.
+	// m.SenderUpload()
 }
