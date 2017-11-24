@@ -126,8 +126,14 @@ func batch(m *Manager, mode string) {
 				if _, err := file.WriteString(command); err != nil {
 					fmt.Println(err)
 				}
+				time.Sleep(5 * time.Second)
 			}
 		}
+	}
+	if mode == "standalone" {
+		file.Chmod(0755)
+		file.Close()
+		os.Exit(0)
 	}
 }
 

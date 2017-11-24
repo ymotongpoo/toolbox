@@ -238,7 +238,7 @@ func (p *Page) Dump() string {
 	filename := fmt.Sprintf("%s-%s.ts", prefix, p.Title)
 	duration := strconv.Itoa(p.Duration())
 	startTime := p.Start.Format(AtCmdFormat)
-	recpt1Str := []string{"echo", "recpt1", "--b25", "--sid", "hd", "--strip", string(p.Provider), duration, filename, "|", "at", "-t", startTime}
+	recpt1Str := []string{"echo", "recpt1", "--b25", "--sid", "hd", "--strip", string(p.Provider), duration, filename, "|", "at", "-t", startTime, "\n"}
 	return strings.Join(recpt1Str, " ")
 }
 
