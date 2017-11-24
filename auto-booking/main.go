@@ -15,6 +15,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -44,22 +45,28 @@ func findChromeDriver() string {
 	return ""
 }
 
+var (
+	mode = flag.String("mode", "server", "option for run mode. 'server' or 'standalone' is available.")
+)
+
 func main() {
+	flag.Parse()
+
 	batchT := time.NewTicker(batchInterval)
 	purgeT := time.NewTicker(purgeInterval)
 	m := NewManager()
-	batch(m)
+	batch(m, *mode)
 	for {
 		select {
 		case <-batchT.C:
-			batch(m)
+			batch(m, *mode)
 		case <-purgeT.C:
 			m.Purge()
 		}
 	}
 }
 
-func batch(m *Manager) {
+func batch(m *Manager, mode string) {
 	// setup
 	selenium.SetDebug(false)
 	path := findChromeDriver()
@@ -106,12 +113,24 @@ func batch(m *Manager) {
 			fmt.Println(err)
 		}
 		if !m.IsRegistered(p.ID) {
-			p.Book()
-			if file != nil {
-				fmt.Fprintf(file, "Job ID: %v -> %v %v (%v ~ %v)\n", p.AtID, p.Title, p.Provider, p.Start, p.End)
+			switch mode {
+			case "server":
+				p.Book()
+				if file != nil {
+					fmt.Fprintf(file, "Job ID: %v -> %v %v (%v ~ %v)\n", p.AtID, p.Title, p.Provider, p.Start, p.End)
+				}
+				m.Add(p)
+				time.Sleep(5 * time.Second)
+			case "standalone":
+				command := p.Dump()
+				if _, err := file.WriteString(command); err != nil {
+					fmt.Println(err)
+				}
 			}
-			m.Add(p)
 		}
-		time.Sleep(5 * time.Second)
 	}
+}
+
+func serverBatch(m *Manager) {
+
 }

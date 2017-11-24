@@ -233,6 +233,15 @@ func (p *Page) Duration() int {
 	return int(p.End.Sub(p.Start) / time.Second)
 }
 
+func (p *Page) Dump() string {
+	prefix := p.Start.Format(FilePrefixFormat)
+	filename := fmt.Sprintf("%s-%s.ts", prefix, p.Title)
+	duration := strconv.Itoa(p.Duration())
+	startTime := p.Start.Format(AtCmdFormat)
+	recpt1Str := []string{"echo", "recpt1", "--b25", "--sid", "hd", "--strip", string(p.Provider), duration, filename, "|", "at", "-t", startTime}
+	return strings.Join(recpt1Str, " ")
+}
+
 // Book issues recpt1 command with at command support for scheduling.
 func (p *Page) Book() {
 	prefix := p.Start.Format(FilePrefixFormat)
