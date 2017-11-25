@@ -87,36 +87,27 @@ func uploadAll(m *synctool.Manager) {
 	files, err := ioutil.ReadDir(cwd)
 	for _, f := range files {
 		path := filepath.Join(cwd, f.Name())
-		if !strings.HasSuffix(f.Name(), ".ts") {
-			log.Printf("ignoring %v from upload target.", path)
-			continue
-		}
-		res, err := m.Upload(path, "", []string{synctool.UploadTargetFolderID})
+		err := upload(m, path)
 		if err != nil {
 			log.Println(err)
-		} else {
-			log.Println(synctool.Loginfo(res))
 		}
-		f := synctool.NewFile(path, res.Id)
-		f.Uploaded = true
-		m.AddFile(f)
 	}
 }
 
-func upload(m *synctool.Manager, path string) {
+func upload(m *synctool.Manager, path string) error {
 	if !strings.HasSuffix(path, ".ts") {
-		log.Printf("ignoring %v from upload target.", path)
-		return
+		return fmt.Errorf("ignoring %v from upload target.", path)
 	}
 	res, err := m.Upload(path, "", []string{synctool.UploadTargetFolderID})
 	if err != nil {
-		log.Println(err)
+		return err
 	} else {
 		log.Println(synctool.Loginfo(res))
 	}
 	f := synctool.NewFile(path, res.Id)
 	f.Uploaded = true
 	m.AddFile(f)
+	return nil
 }
 
 func update(m *synctool.Manager) {
