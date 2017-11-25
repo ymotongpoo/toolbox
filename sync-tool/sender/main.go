@@ -97,6 +97,9 @@ func uploadAll(m *synctool.Manager) {
 		} else {
 			log.Println(synctool.Loginfo(res))
 		}
+		f := synctool.NewFile(path, res.Id)
+		f.Uploaded = true
+		m.AddFile(f)
 	}
 }
 
