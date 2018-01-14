@@ -68,7 +68,7 @@ func atReader(line string) {
 	if err != nil {
 		log.Printf("[at] %v\n", err)
 	}
-	if err = atq.Start(); err != nil {
+	if err = at.Start(); err != nil {
 		log.Fatalf("[at] failed to start: %v\n", err)
 	}
 
@@ -89,7 +89,7 @@ func atReader(line string) {
 			id, elements[2], elements[3], elements[1], elements[4], filename)
 	}
 
-	if err = atq.Wait(); err != nil {
+	if err = at.Wait(); err != nil {
 		log.Fatalf("[at] failed to wait: %v\n", err)
 	}
 }
