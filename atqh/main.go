@@ -35,12 +35,15 @@ func main() {
 
 // Read lines from `atq` command and pass the lines into channel.
 func atqReader(ch chan<- string) {
+	defer close(ch)
 	atq := exec.Command("atq")
 	stdout, err := atq.StdoutPipe()
 	if err != nil {
 		log.Fatalf("[atq] failed with error: %v\n", err)
 	}
-
+	if err = atq.Start(); err != nil {
+		log.Fatalf("[atq] failed to start: %v\n", err)
+	}
 	reader := bufio.NewReader(stdout)
 	for {
 		line, err := reader.ReadString('\n')
@@ -52,7 +55,9 @@ func atqReader(ch chan<- string) {
 		}
 		ch <- line
 	}
-	close(ch)
+	if err = atq.Wait(); err != nil {
+		log.Fatalf("[atq] failed to wait: %v\n", err)
+	}
 }
 
 func atReader(line string) {
@@ -63,6 +68,10 @@ func atReader(line string) {
 	if err != nil {
 		log.Printf("[at] %v\n", err)
 	}
+	if err = atq.Start(); err != nil {
+		log.Fatalf("[at] failed to start: %v\n", err)
+	}
+
 	reader := bufio.NewReader(stdout)
 	for {
 		line, err := reader.ReadString('\n')
@@ -78,5 +87,9 @@ func atReader(line string) {
 
 		fmt.Printf("%v %v %v (%v) %v %v\n",
 			id, elements[2], elements[3], elements[1], elements[4], filename)
+	}
+
+	if err = atq.Wait(); err != nil {
+		log.Fatalf("[at] failed to wait: %v\n", err)
 	}
 }
