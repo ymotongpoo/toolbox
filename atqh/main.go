@@ -29,7 +29,7 @@ func main() {
 	ch := make(chan string, MaxAtCommand)
 	atqReader(ch)
 	for line := range ch {
-		go atReader(line)
+		atReader(line)
 	}
 }
 
@@ -61,8 +61,8 @@ func atqReader(ch chan<- string) {
 }
 
 func atReader(line string) {
-	elements := strings.Split(line, " ")
-	id := elements[0]
+	fields := strings.Fields(line)
+	id := fields[0]
 	at := exec.Command("at", "-c", id)
 	stdout, err := at.StdoutPipe()
 	if err != nil {
@@ -83,10 +83,10 @@ func atReader(line string) {
 		}
 		// eg. "recpt1 --b25 --sid hd --strip 26 300 20180115T0730-ピタゴラスイッチ.ts"
 		recppt1Command := strings.SplitN(line, " ", 8)
-		filename := recppt1Command[7]
+		filename := strings.TrimSpace(recppt1Command[7])
 
 		fmt.Printf("%v %v %v (%v) %v %v\n",
-			id, elements[2], elements[3], elements[1], elements[4], filename)
+			id, fields[2], fields[3], fields[1], fields[4], filename)
 	}
 
 	if err = at.Wait(); err != nil {
