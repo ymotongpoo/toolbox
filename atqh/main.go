@@ -46,7 +46,7 @@ func main() {
 	go func() {
 		defer close(bookingCh)
 		for line := range ch {
-			go atReader(line, bookingCh)
+			atReader(line, bookingCh)
 		}
 	}()
 
