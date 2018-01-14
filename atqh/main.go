@@ -20,16 +20,43 @@ import (
 	"io"
 	"log"
 	"os/exec"
+	"sort"
 	"strings"
+	"time"
 )
 
 const MaxAtCommand = 1000
 
+type booking struct {
+	id       string
+	datetime time.Time
+	filename string
+}
+
+type byDatetime []booking
+
+func (bd byDatetime) Len() int           { return len(bd) }
+func (bd byDatetime) Swap(i, j int)      { bd[i], bd[j] = bd[j], bd[i] }
+func (bd byDatetime) Less(i, j int) bool { return bd[i].datetime.Before(bd[j].datetime) }
+
 func main() {
 	ch := make(chan string, MaxAtCommand)
 	atqReader(ch)
-	for line := range ch {
-		atReader(line)
+	bookingCh := make(chan booking, MaxAtCommand)
+	go func() {
+		defer close(bookingCh)
+		for line := range ch {
+			go atReader(line, bookingCh)
+		}
+	}()
+
+	bookingList := []booking{}
+	for b := range bookingCh {
+		bookingList = append(bookingList, b)
+	}
+	sort.Sort(byDatetime(bookingList))
+	for _, b := range bookingList {
+		fmt.Printf("%v %v %v\n", b.id, b.datetime.Format(time.ANSIC), b.filename)
 	}
 }
 
@@ -60,7 +87,9 @@ func atqReader(ch chan<- string) {
 	}
 }
 
-func atReader(line string) {
+// Read output from at command with id given in line,
+// and extract recpt1 command data.
+func atReader(line string, ch chan<- booking) {
 	fields := strings.Fields(line)
 	id := fields[0]
 	at := exec.Command("at", "-c", id)
@@ -85,10 +114,18 @@ func atReader(line string) {
 		recppt1Command := strings.SplitN(line, " ", 8)
 		filename := strings.TrimSpace(recppt1Command[7])
 
-		fmt.Printf("%v %v %v (%v) %v %v\n",
-			id, fields[2], fields[3], fields[1], fields[4], filename)
+		datetime, err := time.Parse("2006Jan02 15:04:05",
+			fmt.Sprintf("%v%v%v %v", fields[5], fields[2], fields[3], fields[4]))
+		if err != nil {
+			log.Fatalf("[atReader] failed to parse time: %v", err)
+		}
+		b := booking{
+			id:       id,
+			datetime: datetime,
+			filename: filename,
+		}
+		ch <- b
 	}
-
 	if err = at.Wait(); err != nil {
 		log.Fatalf("[at] failed to wait: %v\n", err)
 	}
