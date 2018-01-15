@@ -16,11 +16,13 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -39,7 +41,16 @@ func (bd byDatetime) Len() int           { return len(bd) }
 func (bd byDatetime) Swap(i, j int)      { bd[i], bd[j] = bd[j], bd[i] }
 func (bd byDatetime) Less(i, j int) bool { return bd[i].datetime.Before(bd[j].datetime) }
 
+type byID []booking
+
+func (bi byID) Len() int           { return len(bi) }
+func (bi byID) Swap(i, j int)      { bi[i], bi[j] = bi[j], bi[i] }
+func (bi byID) Less(i, j int) bool { return bi[i].id < bi[j].id }
+
+var option = flag.Bool("id", false, "sort by id")
+
 func main() {
+	flag.Parse()
 	ch := make(chan string, MaxAtCommand)
 	atqReader(ch)
 	bookingCh := make(chan booking, MaxAtCommand)
@@ -54,9 +65,28 @@ func main() {
 	for b := range bookingCh {
 		bookingList = append(bookingList, b)
 	}
-	sort.Sort(byDatetime(bookingList))
-	for _, b := range bookingList {
-		fmt.Printf("%v %v %v\n", b.id, b.datetime.Format(time.ANSIC), b.filename)
+	if !*option {
+		sort.Sort(byDatetime(bookingList))
+	} else {
+		sort.Sort(byID(bookingList))
+	}
+	if flag.NArg() > 1 {
+		for _, b := range bookingList {
+			fmt.Printf("%v %v %v\n", b.id, b.datetime.Format(time.ANSIC), b.filename)
+		}
+	} else {
+		day, err := strconv.Atoi(flag.Arg(0))
+		if err != nil {
+			log.Fatalf("[main] failed to convert string: %v", err)
+		}
+		if day < 0 || day > 31 {
+			log.Fatalf("[main] day should be 0-31: %v", err)
+		}
+		for _, b := range bookingList {
+			if b.datetime.Day() == day {
+				fmt.Printf("%v %v %v\n", b.id, b.datetime.Format(time.ANSIC), b.filename)
+			}
+		}
 	}
 }
 
