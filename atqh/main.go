@@ -70,7 +70,7 @@ func main() {
 	} else {
 		sort.Sort(byID(bookingList))
 	}
-	if flag.NArg() > 1 && flag.Arg(0) != "" {
+	if flag.NArg() == 0 {
 		for _, b := range bookingList {
 			fmt.Printf("%v %v %v\n", b.id, b.datetime.Format(time.ANSIC), b.filename)
 		}
