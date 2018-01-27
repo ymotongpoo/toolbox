@@ -144,7 +144,7 @@ func atReader(line string, ch chan<- booking) {
 		recppt1Command := strings.SplitN(line, " ", 8)
 		filename := strings.TrimSpace(recppt1Command[7])
 
-		datetime, err := time.Parse("2006Jan02 15:04:05",
+		datetime, err := time.Parse("2006Jan2 15:04:05",
 			fmt.Sprintf("%v%v%v %v", fields[5], fields[2], fields[3], fields[4]))
 		if err != nil {
 			log.Fatalf("[atReader] failed to parse time: %v", err)
