@@ -19,6 +19,8 @@ import "regexp"
 func programTitleFilter() []*regexp.Regexp {
 	ptn := []string{
 		// Seasonal
+		`.*マッサン.*`,
+		`.*半分、青い。.*`,
 		`.*花子とアン.*`,
 		`.*わろてんか.*`,
 		`.*ポプテピピック.*`,
@@ -42,6 +44,7 @@ func programTitleFilter() []*regexp.Regexp {
 		`.*ルパン三世.*`,
 		`.*ゴッドタン.*`,
 		`.*3月のライオン.*`,
+		`.*ピアノの森.*`,
 		`.*プロフェッショナル　仕事の流儀.*`,
 		`.*オイコノミア.*`,
 		`.*日本の話芸.*`,
