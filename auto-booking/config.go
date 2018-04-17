@@ -68,6 +68,7 @@ func programTitleFilter() []*regexp.Regexp {
 		`.*社会と情報.*`,
 		`.*簿記.*`,
 		`.*将棋.*`,
+		`.*サラメシ.*`,
 		// Irregular
 		`.*ぼくらはマンガで強くなった.*`,
 		`.*BS1スペシャル.*`,
