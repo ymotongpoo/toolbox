@@ -55,7 +55,7 @@ const (
 	BSTBS           = "BS01_1"
 	BSNTV           = "BS13_0"
 	BSCX            = "BS13_1"
-	BSJPN           = "BS03_1"
+	BSJPN           = "BS01_2"
 	NHKBS1          = "BS15_0"
 	NHKBS2          = "BS15_1"
 )
