@@ -1,4 +1,4 @@
-//    Copyright 2017 Yoshi Yamaguchi
+//    Copyright 2017,2018 Yoshi Yamaguchi
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -56,8 +56,10 @@ const (
 	BSNTV           = "BS13_0"
 	BSCX            = "BS13_1"
 	BSJPN           = "BS01_2"
-	NHKBS1          = "BS15_1"
+	NHKBS1          = "BS15_0"
 	NHKBS2          = "BS03_1"
+	BS11            = "BS09_0"
+	BS12            = "BS09_2"
 )
 
 var ProviderMap = map[string]Provider{
@@ -77,6 +79,8 @@ var ProviderMap = map[string]Provider{
 	"BS-TBS":     BSTBS,
 	"BSジャパン":     BSJPN,
 	"BSフジ・181":   BSCX,
+	"BS11イレブン":   BS11,
+	"BS12トゥエルビ":  BS12,
 }
 
 var ReplaceCharMap = map[string]string{
