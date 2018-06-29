@@ -84,6 +84,8 @@ func programTitleFilter() []*regexp.Regexp {
 		`.*アメトーーク！.*`,
 		`.*奇跡体験！アンビリバボー.*`,
 		`.*ダーウィンが来た.*`,
+		`.*バキ.*`,
+		`.*バカボンのパパ.*`,
 	}
 	ret := []*regexp.Regexp{}
 	for _, p := range ptn {
