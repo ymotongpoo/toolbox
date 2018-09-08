@@ -126,9 +126,6 @@ func programTitleFilter() []*regexp.Regexp {
 		`.*マッサン.*`,
 		`.*半分、青い。.*`,
 		`.*カーネーション.*`,
-		`.*花子とアン.*`,
-		`.*わろてんか.*`,
-		`.*ポプテピピック.*`,
 		`.*西郷どん.*`,
 		// Weekdays
 		`.*デザインあ.*`,
@@ -139,8 +136,8 @@ func programTitleFilter() []*regexp.Regexp {
 		`.*BS世界のドキュメンタリー.*`,
 		`.*クローズアップ現代.*`,
 		`.*日経プラス10.*`,
+		`.*幽☆遊☆白書.*`,
 		// Weekly
-		`.*ねほりんぱほりん.*`,
 		`.*旅するスペイン語.*`,
 		`.*タモリ倶楽部.*`,
 		`.*ブラタモリ.*`,
@@ -148,7 +145,6 @@ func programTitleFilter() []*regexp.Regexp {
 		`.*ドキュメント72時間.*`,
 		`.*ルパン三世.*`,
 		`.*ゴッドタン.*`,
-		`.*3月のライオン.*`,
 		`.*ピアノの森.*`,
 		`.*植物男子.*`,
 		`.*プロフェッショナル　仕事の流儀.*`,
@@ -161,10 +157,8 @@ func programTitleFilter() []*regexp.Regexp {
 		`.*世界仰天ニュース.*`,
 		`.*水曜どうでしょう.*`,
 		`.*マツコの知らない世界.*`,
-		`.*超入門！落語　THE　MOVIE.*`,
 		`.*探検バクモン.*`,
 		`.*日本の話芸.*`,
-		`.*超AI入門.*`,
 		`.*世界史.*`,
 		`.*日本史.*`,
 		`.*地理.*`,
@@ -175,21 +169,28 @@ func programTitleFilter() []*regexp.Regexp {
 		`.*将棋.*`,
 		`.*サラメシ.*`,
 		// Irregular
-		`.*ぼくらはマンガで強くなった.*`,
 		`.*BS1スペシャル.*`,
 		`.*新日本風土記.*`,
 		`.*落語研究会.*`,
-		`.*ATPテニス.*`,
+		`.*ATP.*`,
 		`.*ウィンブルドン.*`,
 		`.*Why！？プログラミング.*`,
 		`.*カガクノミカタ.*`,
 		`.*ウルトラ重機.*`,
-		`.*MR\. BEAN.*`,
 		`.*アメトーーク！.*`,
 		`.*奇跡体験！アンビリバボー.*`,
 		`.*ダーウィンが来た.*`,
 		`.*バキ.*`,
+		// Old
 		`.*バカボンのパパ.*`,
+		`.*ぼくらはマンガで強くなった.*`,
+		`.*ねほりんぱほりん.*`,
+		`.*ポプテピピック.*`,
+		`.*花子とアン.*`,
+		`.*わろてんか.*`,
+		`.*3月のライオン.*`,
+		`.*超入門！落語　THE　MOVIE.*`,
+		`.*MR\. BEAN.*`,
 	}
 	ret := []*regexp.Regexp{}
 	for _, p := range ptn {
@@ -229,7 +230,7 @@ func (p *Program) Recpt1AtCmd() string {
 	duration := strconv.Itoa(int(p.End.Sub(*p.Start) / time.Second))
 	startTime := p.Start.Format(AtCmdFormat)
 	recpt1Str := []string{"echo", "recpt1", "--b25", "--sid", "hd", "--strip",
-		string(p.Provider), duration, filename, "|", "at", "-t", startTime, "\n"}
+		string(p.Provider), duration, filename, "|", "at", "-t", startTime}
 	return strings.Join(recpt1Str, " ")
 }
 
