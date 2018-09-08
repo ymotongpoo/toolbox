@@ -30,18 +30,29 @@ import (
 const (
 	// BaseURL is the base URL of the G-guide web page.
 	BaseURL = "https://tv.so-net.ne.jp"
+
 	// FilePrefixFormat is the standard prefix format of the file.
 	FilePrefixFormat = "20060102T1504"
+
 	// AtCmdFormat is the format to express the datetime in `at` command.
 	AtCmdFormat = "0601021504.05"
+
+	// NumWorkers is the number of the workers to fetch the detailed web page.
+	NumWorkers = 5
 )
 
 var (
-	TimePattern = regexp.MustCompile(`(\d{1,2})/(\d{1,2}) \(.*\) (\d{1,2})\:(\d{1,2}) ～ (\d{1,2})\:(\d{1,2})`)
-	JST         *time.Location
+	// GGuideTimePattern is the date time pattern shown in G-guide web site.
+	GGuideTimePattern = regexp.MustCompile(`(\d{1,2})/(\d{1,2}) \(.*\) (\d{1,2})\:(\d{1,2}) ～ (\d{1,2})\:(\d{1,2})`)
+
+	// JST is the default *time.Location variable to make time.Date.
+	JST *time.Location
+
+	// TitleFilter is the filter to pick only relevant programs based on program title.
 	TitleFilter []*regexp.Regexp
 )
 
+// ReplaceCharMap is the list of characters to replace to make shell safe string.
 var ReplaceCharMap = map[string]string{
 	"/": "／",
 	" ": "_",
@@ -63,6 +74,7 @@ var ReplaceCharMap = map[string]string{
 	"]": "】",
 }
 
+// Provider is the enum type of the TV provider.
 type Provider string
 
 const (
@@ -86,6 +98,7 @@ const (
 	BS12            = "BS09_2"
 )
 
+// ProviderMap is the map between the name strings and the enum values.
 var ProviderMap = map[string]Provider{
 	"ＮＨＫ総合１・東京(Ch.1)":   NHK,
 	"ＮＨＫＥテレ１・東京(Ch.2)":  ETV,
@@ -208,6 +221,8 @@ func (p *Program) String() string {
 	return fmt.Sprintf("%s %s (%s - %s) %s", p.Provider, p.URL, p.Start, p.End, p.Title)
 }
 
+// Recpt1AtCmd generates single line command string to book recpt1 command
+// at the specified time based on the value in p.
 func (p *Program) Recpt1AtCmd() string {
 	prefix := p.Start.Format(FilePrefixFormat)
 	filename := fmt.Sprintf("%s-%s.ts", prefix, p.Title)
@@ -219,7 +234,7 @@ func (p *Program) Recpt1AtCmd() string {
 }
 
 func extractStartEndTime(t string) (*time.Time, *time.Time, error) {
-	found := TimePattern.FindStringSubmatch(t)
+	found := GGuideTimePattern.FindStringSubmatch(t)
 	if len(found) != 7 {
 		return nil, nil, fmt.Errorf("no time found: %v", t)
 	}
@@ -320,7 +335,9 @@ func fetchDetail(wg *sync.WaitGroup, urls <-chan string, ps chan<- *Program) {
 	}
 }
 
-func WriteToFile(ps <-chan *Program) error {
+// WriteToShellScript dumps the programs data from ps to generate
+// actual shell script to book those programs.
+func WriteToShellScript(ps <-chan *Program) error {
 	now := time.Now().Format("20060102T1504")
 	file, err := os.OpenFile(now+".sh", os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
@@ -363,7 +380,7 @@ func fetchAllProgramsStage(wg *sync.WaitGroup, ch chan<- string, d *goquery.Docu
 
 func fetchDetailStage(ch <-chan string, ps chan *Program) {
 	var wg sync.WaitGroup
-	for i := 0; i < 5; i++ {
+	for i := 0; i < NumWorkers; i++ {
 		wg.Add(1)
 		go fetchDetail(&wg, ch, ps)
 	}
@@ -397,7 +414,7 @@ func main() {
 	programCh := make(chan *Program)
 	go fetchDetailStage(urlCh, programCh)
 
-	if err := WriteToFile(programCh); err != nil {
+	if err := WriteToShellScript(programCh); err != nil {
 		log.Fatalln(err)
 	}
 }
