@@ -177,7 +177,7 @@ func programTitleFilter() []*regexp.Regexp {
 		`.*Why！？プログラミング.*`,
 		`.*カガクノミカタ.*`,
 		`.*ウルトラ重機.*`,
-		`.*アメトーーク！.*`,
+		`.*アメトーーク.*`,
 		`.*奇跡体験！アンビリバボー.*`,
 		`.*ダーウィンが来た.*`,
 		`.*バキ.*`,
@@ -210,12 +210,14 @@ func init() {
 
 // Program is the struct to hold TV program metadata
 type Program struct {
-	URL      string
-	Title    string
-	Start    *time.Time
-	End      *time.Time
-	Channel  string
-	Provider Provider
+	URL         string
+	Title       string
+	Start       *time.Time
+	End         *time.Time
+	Channel     string
+	Provider    Provider
+	Summary     string
+	Description string
 }
 
 func (p *Program) String() string {
@@ -308,13 +310,21 @@ func extractProgramData(d *goquery.Document) (*Program, error) {
 	chanSel := timeSel.Next()
 	chanText := strings.TrimSpace(chanSel.Text())
 
+	summarySel := d.Find("p.basicTxt").First()
+	summary := strings.TrimSpace(summarySel.Text())
+
+	descSel := summarySel.Next()
+	desc := descSel.Text()
+
 	return &Program{
-		URL:      d.Url.String(),
-		Title:    title,
-		Start:    start,
-		End:      end,
-		Channel:  chanText,
-		Provider: ProviderMap[chanText],
+		URL:         d.Url.String(),
+		Title:       title,
+		Start:       start,
+		End:         end,
+		Channel:     chanText,
+		Provider:    ProviderMap[chanText],
+		Summary:     summary,
+		Description: desc,
 	}, nil
 }
 
