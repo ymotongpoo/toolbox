@@ -125,6 +125,8 @@ func programTitleFilter() []*regexp.Regexp {
 		// Seasonal
 		`.*マッサン.*`,
 		`.*半分、青い。.*`,
+		`.*まんぷく.*`,
+		`.*べっぴんさん.*`,
 		`.*カーネーション.*`,
 		`.*西郷どん.*`,
 		// Weekdays
