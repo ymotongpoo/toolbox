@@ -133,16 +133,20 @@ func atReader(line string, ch chan<- booking) {
 
 	reader := bufio.NewReader(stdout)
 	for {
-		line, err := reader.ReadString('\n')
+		l, err := reader.ReadString('\n')
 		if err == io.EOF {
 			break
 		}
-		if !strings.HasPrefix(line, "recpt1") {
+		if !strings.HasPrefix(l, "recpt1") {
 			continue
 		}
 		// eg. "recpt1 --b25 --sid hd --strip 26 300 20180115T0730-ピタゴラスイッチ.ts"
-		recppt1Command := strings.SplitN(line, " ", 8)
-		filename := strings.TrimSpace(recppt1Command[7])
+		recpt1Command := strings.SplitN(l, " ", 8)
+		if len(recpt1Command) < 8 {
+			log.Printf("[at] invalid line: %s\n", l)
+			continue
+		}
+		filename := strings.TrimSpace(recpt1Command[7])
 
 		datetime, err := time.Parse("2006Jan2 15:04:05",
 			fmt.Sprintf("%v%v%v %v", fields[5], fields[2], fields[3], fields[4]))
