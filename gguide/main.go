@@ -192,7 +192,7 @@ func programTitleFilter() []*regexp.Regexp {
 		`.*花子とアン.*`,
 		`.*わろてんか.*`,
 		`.*3月のライオン.*`,
-		`.*超入門！落語　THE　MOVIE.*`,
+		`.*超入門！落語THE　MOVIE.*`,
 		`.*MR\. BEAN.*`,
 	}
 	ret := []*regexp.Regexp{}
