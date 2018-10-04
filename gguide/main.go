@@ -91,7 +91,7 @@ const (
 	BSTBS           = "BS01_1"
 	BSNTV           = "BS13_0"
 	BSCX            = "BS13_1"
-	BSJPN           = "BS01_2"
+	BSTX            = "BS01_2"
 	NHKBS1          = "BS15_0"
 	NHKBS2          = "BS03_1"
 	BS11            = "BS09_0"
@@ -114,7 +114,7 @@ var ProviderMap = map[string]Provider{
 	"ＢＳ日テレ(Ch.4)":       BSNTV,
 	"ＢＳ朝日(Ch.5)":        BSEX,
 	"ＢＳ-ＴＢＳ(Ch.6)":      BSTBS,
-	"ＢＳジャパン(Ch.7)":      BSJPN,
+	"ＢＳテレ東(Ch.7)":       BSTX,
 	"ＢＳフジ(Ch.8)":        BSCX,
 	"BS11イレブン(Ch.11)":   BS11,
 	"BS12 トゥエルビ(Ch.12)": BS12,
