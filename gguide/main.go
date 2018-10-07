@@ -49,7 +49,8 @@ var (
 	JST *time.Location
 
 	// TitleFilter is the filter to pick only relevant programs based on program title.
-	TitleFilter []*regexp.Regexp
+	TitleIncludeFilter []*regexp.Regexp
+	TitleExcludeFilter []*regexp.Regexp
 )
 
 // ReplaceCharMap is the list of characters to replace to make shell safe string.
@@ -120,87 +121,96 @@ var ProviderMap = map[string]Provider{
 	"BS12 トゥエルビ(Ch.12)": BS12,
 }
 
-func programTitleFilter() []*regexp.Regexp {
-	ptn := []string{
-		// Seasonal
-		`.*マッサン.*`,
-		`.*半分、青い。.*`,
-		`.*まんぷく.*`,
-		`.*べっぴんさん.*`,
-		`.*カーネーション.*`,
-		`.*西郷どん.*`,
-		// Weekdays
-		`.*デザインあ.*`,
-		`.*ピタゴラスイッチ.*`,
-		`.*Eテレ0655.*`,
-		`.*Eテレ2355.*`,
-		`.*地球ドラマチック.*`,
-		`.*BS世界のドキュメンタリー.*`,
-		`.*クローズアップ現代.*`,
-		`.*日経プラス10.*`,
-		`.*幽☆遊☆白書.*`,
-		`.*ねほりんぱほりん.*`,
-		`.*ジョジョの奇妙な冒険.*`,
-		// Weekly
-		`.*旅するスペイン語.*`,
-		`.*タモリ倶楽部.*`,
-		`.*ブラタモリ.*`,
-		`.*鉄腕.*`,
-		`.*ドキュメント72時間.*`,
-		`.*ルパン三世.*`,
-		`.*ゴッドタン.*`,
-		`.*ピアノの森.*`,
-		`.*植物男子.*`,
-		`.*プロフェッショナル　仕事の流儀.*`,
-		`.*オイコノミア.*`,
-		`.*日本の話芸.*`,
-		`.*所さんの目がテン.*`,
-		`.*NHKスペシャル.*`,
-		`.*世界ふしぎ発見.*`,
-		`.*探偵\!ナイトスクープ.*`,
-		`.*世界仰天ニュース.*`,
-		`.*水曜どうでしょう.*`,
-		`.*マツコの知らない世界.*`,
-		`.*探検バクモン.*`,
-		`.*日本の話芸.*`,
-		`.*世界史.*`,
-		`.*日本史.*`,
-		`.*地理.*`,
-		`.*ビジネス基礎.*`,
-		`.*家庭総合.*`,
-		`.*社会と情報.*`,
-		`.*簿記.*`,
-		`.*将棋.*`,
-		`.*サラメシ.*`,
-		`.*昭和元禄落語心中.*`,
-		// Irregular
-		`.*BS1スペシャル.*`,
-		`.*新日本風土記.*`,
-		`.*落語研究会.*`,
-		`.*ATP.*`,
-		`.*ウィンブルドン.*`,
-		`.*Why！？プログラミング.*`,
-		`.*カガクノミカタ.*`,
-		`.*ウルトラ重機.*`,
-		`.*アメトーーク.*`,
-		`.*奇跡体験！アンビリバボー.*`,
-		`.*ダーウィンが来た.*`,
-		`.*バキ.*`,
-		// Old
-		`.*バカボンのパパ.*`,
-		`.*ぼくらはマンガで強くなった.*`,
-		`.*ポプテピピック.*`,
-		`.*花子とアン.*`,
-		`.*わろてんか.*`,
-		`.*3月のライオン.*`,
-		`.*超入門！落語THE　MOVIE.*`,
-		`.*MR\. BEAN.*`,
-	}
+var IncludePattern = []string{
+	// Seasonal
+	`.*マッサン.*`,
+	`.*半分、青い。.*`,
+	`.*まんぷく.*`,
+	`.*べっぴんさん.*`,
+	`.*カーネーション.*`,
+	`.*西郷どん.*`,
+	// Weekdays
+	`.*デザインあ.*`,
+	`.*ピタゴラスイッチ.*`,
+	`.*Eテレ0655.*`,
+	`.*Eテレ2355.*`,
+	`.*地球ドラマチック.*`,
+	`.*BS世界のドキュメンタリー.*`,
+	`.*クローズアップ現代.*`,
+	`.*日経プラス10.*`,
+	`.*幽☆遊☆白書.*`,
+	`.*ねほりんぱほりん.*`,
+	`.*ジョジョの奇妙な冒険.*`,
+	// Weekly
+	`.*旅するスペイン語.*`,
+	`.*タモリ倶楽部.*`,
+	`.*ブラタモリ.*`,
+	`.*鉄腕.*`,
+	`.*ドキュメント72時間.*`,
+	`.*ルパン三世.*`,
+	`.*ゴッドタン.*`,
+	`.*ピアノの森.*`,
+	`.*植物男子.*`,
+	`.*プロフェッショナル　仕事の流儀.*`,
+	`.*オイコノミア.*`,
+	`.*日本の話芸.*`,
+	`.*所さんの目がテン.*`,
+	`.*NHKスペシャル.*`,
+	`.*世界ふしぎ発見.*`,
+	`.*探偵\!ナイトスクープ.*`,
+	`.*世界仰天ニュース.*`,
+	`.*水曜どうでしょう.*`,
+	`.*マツコの知らない世界.*`,
+	`.*探検バクモン.*`,
+	`.*日本の話芸.*`,
+	`.*世界史.*`,
+	`.*日本史.*`,
+	`.*地理.*`,
+	`.*ビジネス基礎.*`,
+	`.*家庭総合.*`,
+	`.*社会と情報.*`,
+	`.*簿記.*`,
+	`.*将棋.*`,
+	`.*サラメシ.*`,
+	`.*昭和元禄落語心中.*`,
+	// Irregular
+	`.*BS1スペシャル.*`,
+	`.*新日本風土記.*`,
+	`.*落語研究会.*`,
+	`.*ATP.*`,
+	`.*ウィンブルドン.*`,
+	`.*Why！？プログラミング.*`,
+	`.*カガクノミカタ.*`,
+	`.*ウルトラ重機.*`,
+	`.*アメトーーク.*`,
+	`.*奇跡体験！アンビリバボー.*`,
+	`.*ダーウィンが来た.*`,
+	`.*バキ.*`,
+	// Old
+	`.*バカボンのパパ.*`,
+	`.*ぼくらはマンガで強くなった.*`,
+	`.*ポプテピピック.*`,
+	`.*花子とアン.*`,
+	`.*わろてんか.*`,
+	`.*3月のライオン.*`,
+	`.*超入門！落語THE　MOVIE.*`,
+	`.*MR\. BEAN.*`,
+}
+
+var ExcludePattern = []string{
+	`.*梅沢富美男と東野幸治の.*`,
+}
+
+func programTitleFilter() ([]*regexp.Regexp, []*regexp.Regexp) {
 	ret := []*regexp.Regexp{}
-	for _, p := range ptn {
+	for _, p := range IncludePattern {
 		ret = append(ret, regexp.MustCompile(p))
 	}
-	return ret
+	ret2 := []*regexp.Regexp{}
+	for _, p := range ExcludePattern {
+		ret2 = append(ret2, regexp.MustCompile(p))
+	}
+	return ret, ret2
 }
 
 func init() {
@@ -209,7 +219,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	TitleFilter = programTitleFilter()
+	TitleIncludeFilter, TitleExcludeFilter = programTitleFilter()
 }
 
 // Program is the struct to hold TV program metadata
@@ -367,7 +377,12 @@ func WriteToShellScript(ps <-chan *Program) error {
 }
 
 func filterProgramWithTitle(title string) bool {
-	for _, p := range TitleFilter {
+	for _, p := range TitleExcludeFilter {
+		if p.MatchString(title) {
+			return false
+		}
+	}
+	for _, p := range TitleIncludeFilter {
 		if p.MatchString(title) {
 			return true
 		}
