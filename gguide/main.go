@@ -174,6 +174,7 @@ var IncludePattern = []string{
 	`.*サラメシ.*`,
 	`.*昭和元禄落語心中.*`,
 	`.*獣になれない私たち.*`,
+	`.*ザ・ノンフィクション.*`,
 	// Irregular
 	`.*BS1スペシャル.*`,
 	`.*新日本風土記.*`,
@@ -199,6 +200,8 @@ var IncludePattern = []string{
 }
 
 var ExcludePattern = []string{
+	`.*プレマップ.*`,
+	`.*いじめをノックアウト.*`,
 	`.*梅沢富美男と東野幸治の.*`,
 }
 
