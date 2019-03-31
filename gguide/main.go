@@ -123,6 +123,8 @@ var ProviderMap = map[string]Provider{
 
 var IncludePattern = []string{
 	// Seasonal
+	`.*なつぞら.*`,
+	`.*おしん.*`,
 	`.*まんぷく.*`,
 	`.*べっぴんさん.*`,
 	`.*カーネーション.*`,
