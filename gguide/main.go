@@ -212,7 +212,7 @@ var IncludePattern = []string{
 var ExcludePattern = []string{
 	`.*プレマップ.*`,
 	`.*いじめをノックアウト.*`,
-	`.*梅沢富美男と東野幸治の.*`,
+	`.*まんぷく農家メシ.*`,
 }
 
 func programTitleFilter() ([]*regexp.Regexp, []*regexp.Regexp) {
