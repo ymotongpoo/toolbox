@@ -37,7 +37,7 @@ func parseTimeOnlyPattern(pattern string) (time.Time, error) {
 	}
 	hour, min, sec := t.Clock()
 	if hour > now.Hour() {
-		now = now.Sub(24 * time.Hour)
+		now = now.Add(-24 * time.Hour)
 	}
 	return time.Date(now.Year(), now.Month(), now.Day(), hour, min, sec, 0, time.UTC), nil
 }
