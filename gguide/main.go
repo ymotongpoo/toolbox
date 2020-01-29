@@ -220,7 +220,7 @@ var IncludePattern = []string{
 var ExcludePattern = []string{
 	`.*プレマップ.*`,
 	`.*いじめをノックアウト.*`,
-	`.*まんぷく農家メシ.*`,
+	`.*まんぷく(農家|漁師)メシ.*`,
 	`.*応援ソング.*`,
 }
 
