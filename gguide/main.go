@@ -123,6 +123,8 @@ var ProviderMap = map[string]Provider{
 
 var IncludePattern = []string{
 	// Seasonal
+	`.*はね駒.*`,
+	`.*エール.*`,
 	`.*スカーレット.*`,
 	`.*おしん.*`,
 	`.*いだてん.*`,
@@ -187,6 +189,10 @@ var IncludePattern = []string{
 	`.*奇跡体験！アンビリバボー.*`,
 	`.*ダーウィンが来た.*`,
 	`.*映像の世紀.*`,
+	`.*未来少年.*`,
+	`.*大家さんと僕.*`,
+	`.*地球事変.*`,
+	`.*みんなで筋肉体操.*`,
 	// Old
 	`.*聖☆おにいさん.*`,
 	`.*バカボンのパパ.*`,
@@ -222,6 +228,9 @@ var ExcludePattern = []string{
 	`.*いじめをノックアウト.*`,
 	`.*まんぷく(農家|漁師)メシ.*`,
 	`.*応援ソング.*`,
+	`.*ネーミングバラエティ.*`,
+	`.*古関裕而.*`,
+	`.*銀河銭湯.*`,
 }
 
 func programTitleFilter() ([]*regexp.Regexp, []*regexp.Regexp) {
