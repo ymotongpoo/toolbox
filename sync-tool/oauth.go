@@ -69,6 +69,7 @@ func getToken(cache string, config *oauth2.Config) (*oauth2.Token, error) {
 
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	fmt.Printf("Access the following URL in the browser and type the auth code: \n%v\n", authURL)
+	fmt.Print("Code: ")
 	var code string
 	if _, err := fmt.Scan(&code); err != nil {
 		return nil, err
