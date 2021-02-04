@@ -32,6 +32,9 @@ func getHTTPClient(ctx context.Context, config *oauth2.Config) (*http.Client, er
 		return nil, err
 	}
 	cache := filepath.Join(tokenCacheDir, "cache.json")
+	if err := touchFile(cache); err != nil {
+		return nil, err
+	}
 	tok, err := getToken(cache, config)
 	if err != nil {
 		return nil, err
@@ -41,6 +44,14 @@ func getHTTPClient(ctx context.Context, config *oauth2.Config) (*http.Client, er
 		return nil, err
 	}
 	return config.Client(ctx, tok), nil
+}
+
+func touchFile(p string) error {
+	err := os.Open(p)
+	if err == os.ErrNotExist {
+		_, err = os.Create(p)
+	}
+	return err
 }
 
 func getToken(cache string, config *oauth2.Config) (*oauth2.Token, error) {
@@ -57,7 +68,7 @@ func getToken(cache string, config *oauth2.Config) (*oauth2.Token, error) {
 	}
 
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	fmt.Printf("Access the following URL in the browser and type the auth code: \n%v\n", authURL)
+	fmt.Printf("Access the following URL in the browser and type the auth code: \n%v\n\nCode: ", authURL)
 	var code string
 	if _, err := fmt.Scan(&code); err != nil {
 		return nil, err
