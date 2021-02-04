@@ -29,7 +29,7 @@ import (
 
 const (
 	// BaseURL is the base URL of the G-guide web page.
-	BaseURL = "https://tv.so-net.ne.jp"
+	BaseURL = "https://www.tvkingdom.jp"
 
 	// FilePrefixFormat is the standard prefix format of the file.
 	FilePrefixFormat = "20060102T1504"
@@ -123,11 +123,14 @@ var ProviderMap = map[string]Provider{
 
 var IncludePattern = []string{
 	// Seasonal
+	`.*岸辺露伴.*`,
+	`.*タイガー.*`,
+	`.*俺の家の話.*`,
 	`.*はね駒.*`,
-	`.*エール.*`,
 	`.*スカーレット.*`,
 	`.*おしん.*`,
 	`.*いだてん.*`,
+	`.*東京箱根間往復大学駅伝競走.*`,
 	// Weekdays
 	`.*デザインあ.*`,
 	`.*ピタゴラスイッチ.*`,
@@ -140,8 +143,6 @@ var IncludePattern = []string{
 	`.*ねほりんぱほりん.*`,
 	`.*ジョジョの奇妙な冒険.*`,
 	`.*ＷＢＳ.*`,
-	`.*ミス・ジコチョー.*`,
-	`.*少年寅次郎.*`,
 	// Weekly
 	`.*旅するスペイン語.*`,
 	`.*タモリ倶楽部.*`,
@@ -221,6 +222,8 @@ var IncludePattern = []string{
 	`.*刑事コロンボ.*`,
 	`.*植物男子.*`,
 	`.*探検バクモン.*`,
+	`.*ミス・ジコチョー.*`,
+	`.*少年寅次郎.*`,
 }
 
 var ExcludePattern = []string{
@@ -336,16 +339,15 @@ func escapeTitle(t string) string {
 }
 
 func extractProgramData(d *goquery.Document) (*Program, error) {
-	titleSel := d.Find("dl.basicTxt > dd").First()
+	titleSel := d.Find("h1.basicContTitle").First()
 	if titleSel == nil {
 		return nil, fmt.Errorf("Title not found: %v", d.Url.String())
 	}
 	title := titleSel.Text()
-	title = strings.Replace(title, "ウェブ検索", "", -1)
 	title = strings.TrimSpace(title)
 	title = escapeTitle(title)
 
-	timeSel := titleSel.Next()
+	timeSel := d.Find("dl.basicTxt > dd").First()
 	timeText := strings.Replace(timeSel.Text(), "この時間帯の番組表", "", -1)
 	timeText = strings.TrimSpace(timeText)
 	start, end, err := extractStartEndTime(timeText)
@@ -387,6 +389,10 @@ func fetchDetail(wg *sync.WaitGroup, urls <-chan string, ps chan<- *Program) {
 			continue
 		}
 		p, err := extractProgramData(doc)
+		if err != nil {
+			log.Printf("Error: couldn't extract program deta: %v", err)
+			continue
+		}
 		ps <- p
 		time.Sleep(1 * time.Second)
 	}
@@ -403,6 +409,10 @@ func WriteToShellScript(ps <-chan *Program) error {
 	defer file.Close()
 	fmt.Fprintln(file, "#!/bin/bash")
 	for p := range ps {
+		if p == nil {
+			fmt.Println("nil pointer")
+			continue
+		}
 		fmt.Fprintln(file, p.Recpt1AtCmd())
 	}
 	return nil
